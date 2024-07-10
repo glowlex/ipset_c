@@ -1,0 +1,9 @@
+x64
+__pycache__
+.vs
+build
+*.egg-info
+dist
+.coverage
+.tox
+*.pyd
