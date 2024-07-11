@@ -8,7 +8,7 @@ import pytest
 @pytest.fixture(scope='session', autouse=True)
 def compileIpset():
     _delCompiledFile()
-    if 'isTox' not in os.environ:
+    if 'compileForTests' in os.environ:
         from setuptools import setup
         from build import extensions
         setupDict = {
