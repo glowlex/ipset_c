@@ -28,7 +28,7 @@ classifiers = [
     'Topic :: Software Development :: Libraries :: Python Modules',
 ]
 keywords = ['network', 'ipset']
-include = ["src/*.c", "src/*.h", {path="tests/*.py", format="sdist"}]
+include = [{path="src/*.[ch]", format="sdist"}, {path="tests/*.py", format="sdist"}]
 
 
 [tool.poetry.urls]
