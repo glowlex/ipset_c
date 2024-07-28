@@ -3,13 +3,15 @@
 
 
 #if !(defined(_WIN32) || defined(__CYGWIN__))
-    #include <wchar.h>
-    #ifndef swscanf_s
-        #define swscanf_s swscanf
-    #endif
     #ifndef swprintf_s
         #define swprintf_s swprintf
     #endif
+    #include <netinet/in.h> 
+    #include <sys/socket.h>
+#else
+    #include <WS2tcpip.h>
+    #include <winsock2.h>
+    #pragma comment(lib, "Ws2_32.lib")
 #endif
 
 
@@ -23,7 +25,7 @@ NetRangeObject* NetRangeObject_create(void);
 
 void NetRangeObject_destroy(NetRangeObject* self);
 
-int NetRangeObject_parseCidr(const wchar_t* cidr, NetRangeObject* netObj);
+int NetRangeObject_parseCidr(const char* cidr, NetRangeObject* netObj);
 
 int NetRangeObject_comparator(const NetRangeObject **elem1, const NetRangeObject **elem2);
 

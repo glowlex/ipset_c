@@ -78,14 +78,13 @@ getNetRangeFromPy(PyObject* cidr) {
         return NULL;
     }
     NetRangeObject* netRange = NetRangeObject_create();
-    wchar_t wp[IPV4_MAX_STRING_LEN] = L"";
-    Py_ssize_t code = PyUnicode_AsWideChar(cidr, (wchar_t*)&wp, IPV4_MAX_STRING_LEN);
-    if (wp == NULL) {
+    const char* cidrUtf8 = PyUnicode_AsUTF8AndSize(cidr, NULL);
+    if (cidrUtf8 == NULL) {
         goto error;
     }
-    code = NetRangeObject_parseCidr((wchar_t*)&wp, netRange);
+    Py_ssize_t code = NetRangeObject_parseCidr(cidrUtf8, netRange);
     if (code) {
-        PyErr_Format(PyExc_ValueError, "cidr is not valid %s", PyUnicode_AsUTF8(cidr));
+        PyErr_Format(PyExc_ValueError, "cidr is not valid %s", PyUnicode_AsUTF8AndSize(cidr, NULL));
         goto error;
     }
     return netRange;
@@ -291,7 +290,7 @@ IPSet__len__(IPSet* self) {
     Py_ssize_t res = 0;
     NetRangeObject** array = self->netsContainer->array;
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
-        res += pow(2, 32 - array[i]->len);
+        res += (Py_ssize_t)(pow(2, 32 - array[i]->len) + 0.5);
     }
     return res;
 }
@@ -312,7 +311,7 @@ static PyNumberMethods IPSet_tp_as_number = {
 
 
 static PySequenceMethods IPSet_tp_as_sequence = {
-    .sq_length = IPSet__len__,
+    .sq_length = (lenfunc)IPSet__len__,
 };
 
 

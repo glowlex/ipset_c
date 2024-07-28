@@ -16,18 +16,26 @@ NetRangeObject_copy(NetRangeObject* self) {
 
 
 int
-NetRangeObject_parseCidr(const wchar_t *cidr, NetRangeObject *netObj) {
-    PY_UINT32_T buf[4] = {0}, len=32;
-    if (swscanf_s(cidr, L"%u.%u.%u.%u/%u", &buf[0], &buf[1], &buf[2], &buf[3], &len) < 4) {
-        return -1;
-    }
-    if (len > 32) {
-        return -1;
-    }
-    for (Py_ssize_t i = 0; i < 4; i++) {
-        if (buf[i] > 255) {
+NetRangeObject_parseCidr(const char *cidr, NetRangeObject *netObj) {
+    char tmpcidr[IPV4_MAX_STRING_LEN];
+    strncpy(tmpcidr, cidr, IPV4_MAX_STRING_LEN);
+    tmpcidr[IPV4_MAX_STRING_LEN - 1] = '\0';
+    PY_UINT32_T len = 32;
+    char *sep = strchr(tmpcidr, '/');
+    if (sep != NULL) {
+        *sep = '\0';
+        sep++;
+        if (strlen(sep) == 0) {
             return -1;
         }
+        len = strtoul(sep, NULL, 10);
+        if (len > 32) {
+            return -1;
+        }
+    }
+    unsigned char buf[4] = {0};
+    if (inet_pton(AF_INET, tmpcidr, buf) != 1) {
+        return -1;
     }
     netObj->first =
         (buf[0] << 24) |

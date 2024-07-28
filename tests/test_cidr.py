@@ -31,7 +31,9 @@ def testIPSetCreate(data: List[str], expected):
     ["333.1.1.1/32"],
     ["1.-1.1.1/32"],
     ["1.1.1.1/-32"],
+    ["9.9.9.9/"],
     ["1.1.1/32"],
+    ['111.111.111.😊'],
     ["test"],
     [["1.1.1.1/33"]],
     ["11111111111111111111111111111111111111111111111111111111111"],
@@ -39,7 +41,7 @@ def testIPSetCreate(data: List[str], expected):
 ])
 def testIPSetCreateError(data):
     import ipset_c
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError)):
         ipset_c.IPSet(data).getCidrs()
 
 
