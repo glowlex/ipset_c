@@ -19,16 +19,10 @@ class BuildFailed(Exception):
 
 class ExtBuilder(build_ext):
     def run(self):
-        try:
-            build_ext.run(self)
-        except (PlatformError, FileNotFoundError):
-            pass
+        build_ext.run(self)
 
     def build_extension(self, ext):
-        try:
-            build_ext.build_extension(self, ext)
-        except (CCompilerError, ExecError, PlatformError, ValueError):
-            pass
+        build_ext.build_extension(self, ext)
 
 
 def build(setup_kwargs):
