@@ -3,9 +3,6 @@
 
 
 #if !(defined(_WIN32) || defined(__CYGWIN__))
-    #ifndef swprintf_s
-        #define swprintf_s swprintf
-    #endif
     #include <netinet/in.h> 
     #include <sys/socket.h>
 #else
@@ -23,15 +20,15 @@ typedef struct {
 
 NetRangeObject* NetRangeObject_create(void);
 
-void NetRangeObject_destroy(NetRangeObject* self);
+void NetRangeObject_destroy(NetRangeObject* const self);
 
 int NetRangeObject_parseCidr(const char* cidr, NetRangeObject* netObj);
 
 int NetRangeObject_comparator(const NetRangeObject **elem1, const NetRangeObject **elem2);
 
-int NetRangeObject_asWideCharCidr(NetRangeObject* const self, wchar_t* const str, const Py_ssize_t size);
+int NetRangeObject_asUtf8CharCidr(const NetRangeObject* const self, char* const str, const Py_ssize_t size);
 
-NetRangeObject* NetRangeObject_copy(NetRangeObject* self);
+NetRangeObject* NetRangeObject_copy(const NetRangeObject* const self);
 
 
 

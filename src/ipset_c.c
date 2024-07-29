@@ -78,13 +78,13 @@ getNetRangeFromPy(PyObject* cidr) {
         return NULL;
     }
     NetRangeObject* netRange = NetRangeObject_create();
-    const char* cidrUtf8 = PyUnicode_AsUTF8AndSize(cidr, NULL);
+    const char* cidrUtf8 = PyUnicode_AsUTF8(cidr);
     if (cidrUtf8 == NULL) {
         goto error;
     }
     Py_ssize_t code = NetRangeObject_parseCidr(cidrUtf8, netRange);
     if (code) {
-        PyErr_Format(PyExc_ValueError, "cidr is not valid %s", PyUnicode_AsUTF8AndSize(cidr, NULL));
+        PyErr_Format(PyExc_ValueError, "cidr is not valid %s", PyUnicode_AsUTF8(cidr));
         goto error;
     }
     return netRange;
@@ -97,12 +97,11 @@ error:
 static PyObject*
 IPSet_getCidrs(IPSet *self) {
     PyObject* resList = PyList_New(self->netsContainer->len);
-    const wchar_t prefix[IPV4_MAX_STRING_LEN] = L"";
-    Py_ssize_t prefixLen = 0;
+    char const prefix[IPV4_MAX_STRING_LEN] = "";
     const NetRangeObject** const netsArray = self->netsContainer->array;
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
-        prefixLen = NetRangeObject_asWideCharCidr((NetRangeObject*)netsArray[i], (wchar_t*)&prefix, IPV4_MAX_STRING_LEN);
-        PyList_SetItem(resList, i, PyUnicode_FromWideChar((wchar_t*)&prefix, prefixLen));
+        NetRangeObject_asUtf8CharCidr((NetRangeObject*)netsArray[i], prefix, IPV4_MAX_STRING_LEN);
+        PyList_SetItem(resList, i, PyUnicode_FromString(prefix));
     }
     return resList;
 }

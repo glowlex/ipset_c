@@ -8,7 +8,7 @@ NetRangeObject_create(void) {
 
 
 NetRangeObject*
-NetRangeObject_copy(NetRangeObject* self) {
+NetRangeObject_copy(const NetRangeObject* const self) {
     NetRangeObject *newItem = NetRangeObject_create();
     memcpy(newItem, self, sizeof(*newItem));
     return newItem;
@@ -33,7 +33,7 @@ NetRangeObject_parseCidr(const char *cidr, NetRangeObject *netObj) {
             return -1;
         }
     }
-    unsigned char buf[4] = {0};
+    Py_UCS1 buf[4] = {0};
     if (inet_pton(AF_INET, tmpcidr, buf) != 1) {
         return -1;
     }
@@ -51,7 +51,7 @@ NetRangeObject_parseCidr(const char *cidr, NetRangeObject *netObj) {
 
 
 void
-NetRangeObject_destroy(NetRangeObject* self) {
+NetRangeObject_destroy(NetRangeObject* const self) {
     PyMem_Free(self);
 }
 
@@ -69,12 +69,8 @@ NetRangeObject_comparator(const NetRangeObject** const elem1, const NetRangeObje
 
 
 int
-NetRangeObject_asWideCharCidr(NetRangeObject* const self, wchar_t* const str, const Py_ssize_t size) {
-    PY_UINT32_T buf[4];
-    PY_UINT32_T addr = self->first;
-    for(Py_ssize_t i=3; i >= 0; i--) {
-        buf[i] = addr & UINT8_MAX;
-        addr >>= 8;
-    }
-    return swprintf_s(str, size, L"%u.%u.%u.%u/%u", buf[0], buf[1], buf[2], buf[3], self->len);
+NetRangeObject_asUtf8CharCidr(const NetRangeObject* const self, char* const str, const Py_ssize_t size) {
+    Py_UCS1 buf[4];
+    *(PY_UINT32_T*)&buf = self->first;
+    return snprintf(str, size, "%u.%u.%u.%u/%u", buf[3], buf[2], buf[1], buf[0], self->len);
 }
