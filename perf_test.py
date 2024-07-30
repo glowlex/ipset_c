@@ -14,21 +14,24 @@ NETS_NUM = 100
 
 
 def test(initNets, actionNets, onlySet=None):
-    ipsetcInit = f'from ipset_c import IPSet; a=IPSet({initNets}); b=IPSet({actionNets}); nets={initNets};'
-    initNetaddr = f'from netaddr import IPSet; a=IPSet({initNets}); b=IPSet({actionNets}); nets={initNets};'
+    ipsetcInit = f'from ipset_c import IPSet; a=IPSet({initNets}); b=IPSet({actionNets}); nets={initNets}; actnets={actionNets};'
+    initNetaddr = f'from netaddr import IPSet; a=IPSet({initNets}); b=IPSet({actionNets}); nets={initNets}; actnets={actionNets};'
     initRad = (f'from radix import Radix; a=Radix(); [a.add(x) for x in {initNets}]; b=Radix();'
-               f' [b.add(x) for x in {actionNets}]; nets={initNets};')
+               f' [b.add(x) for x in {actionNets}]; nets={initNets}; actnets={actionNets};')
     initPt = (f'from pytricia import PyTricia; a=PyTricia(); [a.insert(x, 0) for x in {initNets}]; b=PyTricia();'
-               f' [b.insert(x, 0) for x in {actionNets}]; nets={initNets};')
+               f' [b.insert(x, 0) for x in {actionNets}]; nets={initNets}; actnets={actionNets};')
     commands = [
         ("IPSet(nets)", "c=PyTricia(); [c.insert(x, 0) for x in nets]",
          "c=Radix(); [c.add(x) for x in nets]", "IPSet(nets)"),
         ("c=IPSet([]); [c.addCidr(x) for x in nets]", "c=PyTricia(); [c.insert(x, 0) for x in nets]",
          "c=Radix();[c.add(x) for x in nets]", "c=IPSet([]);[c.add(x) for x in nets]"),
+        ("a.getCidrs()", "a.keys();", "a.prefixes()", "list(a.iter_cidrs())"),
         ('a.isSuperset(b)', "all(x in a for x in b)",
-         "all(a.search_best(x) for x in b.prefixes())", 'a.issuperset(b)'),
+         "all(a.search_worst(x) for x in b.prefixes())", 'a.issuperset(b)'),
+        ('all(a.isContainsCidr(x) for x in actnets)', "all(x in a for x in actnets)",
+         "all(a.search_worst(x) for x in actnets)", 'all(x in a for x in actnets)'),
         ('a.isSubset(b)', "all(x in b for x in a)",
-         "all(b.search_best(x) for x in a.prefixes())", 'a.issubset(b)'),
+         "all(b.search_worst(x) for x in a.prefixes())", 'a.issubset(b)'),
         ('a & b', 'pass', 'pass', 'a & b'),
         ('a | b', "[a.insert(x, 0) for x in b]", "[a.add(x) for x in b.prefixes()]", 'a | b'),
         ('a - b', "for x in b:\n try:\n  a.delete(x)\n except:\n  pass",
