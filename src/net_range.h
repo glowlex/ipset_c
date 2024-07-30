@@ -3,7 +3,7 @@
 
 
 #if !(defined(_WIN32) || defined(__CYGWIN__))
-    #include <netinet/in.h> 
+    #include <arpa/inet.h>
     #include <sys/socket.h>
 #else
     #include <WS2tcpip.h>

@@ -125,7 +125,7 @@ mergeNetRanges(NetRangeContainer *const  self) {
     if (self->len < 2) {
         return;
     }
-    qsort(self->array, self->len, sizeof(self->array[0]), comparatorWithLen);
+    qsort(self->array, self->len, sizeof(self->array[0]), (int (*)(void const*, void const*))comparatorWithLen);
     Py_ssize_t changesNum = 0;
     changesNum = mergeNetRangesArray(self->array, self->len);
     if (changesNum) {
@@ -209,7 +209,9 @@ bsearchComparatorIntersects(const NetRangeObject **const a, const NetRangeObject
 
 Py_ssize_t
 NetRangeContainer_findNetRangeContainsIndex(const NetRangeContainer *const self, const NetRangeObject *const item) {
-    NetRangeObject **pItem = (NetRangeObject**)bsearch(&item, self->array, self->len, sizeof(NetRangeObject*), bsearchComparator);
+    NetRangeObject **pItem = (NetRangeObject**)bsearch(
+        &item, self->array, self->len, sizeof(NetRangeObject*), (int (*)(void const*, void const*))bsearchComparator
+    );
     if (pItem) {
         return (pItem - self->array);
     }
@@ -219,7 +221,9 @@ NetRangeContainer_findNetRangeContainsIndex(const NetRangeContainer *const self,
 
 Py_ssize_t
 NetRangeContainer_findNetRangeIntersectsIndex(const NetRangeContainer *const self, const NetRangeObject *const item) {
-    NetRangeObject **pItem = (NetRangeObject**)bsearch(&item, self->array, self->len, sizeof(NetRangeObject*), bsearchComparatorIntersects);
+    NetRangeObject **pItem = (NetRangeObject**)bsearch(
+        &item, self->array, self->len, sizeof(NetRangeObject*), (int (*)(void const*, void const*))bsearchComparatorIntersects
+    );
     if (pItem) {
         return (pItem - self->array);
     }
@@ -232,7 +236,9 @@ NetRangeContainer_isSuperset(const NetRangeContainer *const self, const NetRange
     Py_ssize_t newStart = 0;
     NetRangeObject **const selfArray = self->array, **const otherArray = other->array;
     for (Py_ssize_t i = 0; i < other->len; i++) {
-        NetRangeObject **pItem = (NetRangeObject**)bsearch(&otherArray[i], &selfArray[newStart], self->len - newStart, sizeof(NetRangeObject*), bsearchComparator);
+        NetRangeObject **pItem = (NetRangeObject**)bsearch(
+            &otherArray[i], &selfArray[newStart], self->len - newStart, sizeof(NetRangeObject*), (int (*)(void const*, void const*))bsearchComparator
+        );
         if (pItem) {
             newStart = (pItem - &selfArray[newStart]);
         } 
