@@ -133,14 +133,20 @@ IPSet_isIntersectsCidr(IPSet* self, PyObject* cidr) {
 static PyObject*
 IPSet_isSuperset(IPSet *self, IPSet *other) {
     IPSET_TYPE_CHECK(other);
-    return NetRangeContainer_isSuperset(self->netsContainer, other->netsContainer) ? Py_NewRef(Py_True) : Py_NewRef(Py_False);
+    if (NetRangeContainer_isSuperset(self->netsContainer, other->netsContainer)) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
 }
 
 
 static PyObject*
 IPSet_isSubset(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
-    return NetRangeContainer_isSuperset(other->netsContainer, self->netsContainer) ? Py_NewRef(Py_True) : Py_NewRef(Py_False);
+    if (NetRangeContainer_isSuperset(other->netsContainer, self->netsContainer)) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
 }
 
 
@@ -237,15 +243,15 @@ static PyObject*
 IPSet__eq__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     if (self->netsContainer->len != other->netsContainer->len) {
-        return Py_NewRef(Py_False);
+        Py_RETURN_FALSE;
     }
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
         NetRangeObject* a = self->netsContainer->array[i], *b = other->netsContainer->array[i];
         if (a->first != b->first || a->len != b->len) {
-            return Py_NewRef(Py_False);
+            Py_RETURN_FALSE;
         }
     }
-    return Py_NewRef(Py_True);
+    Py_RETURN_TRUE;
 }
 
 
@@ -254,10 +260,10 @@ IPSet__neq__(IPSet* self, IPSet* other) {
     PyObject* res = IPSet__eq__(self, other);
     if (Py_IsTrue(res)) {
         Py_XDECREF(res);
-        return Py_NewRef(Py_False);
+        Py_RETURN_FALSE;
     }
     Py_XDECREF(res);
-    return Py_NewRef(Py_True);
+    Py_RETURN_TRUE;
 }
 
 

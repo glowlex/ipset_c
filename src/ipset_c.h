@@ -7,11 +7,6 @@
     #define PyModule_AddObjectRef PyModule_AddObject
     #define Py_Is(x, y) ((x) == (y))
     #define Py_IsTrue(x) Py_Is((x), Py_True)
-    static inline PyObject* __Py_NewRef(PyObject* obj) {
-        Py_INCREF(obj);
-        return obj;
-    }
-    #define Py_NewRef(obj) __Py_NewRef(_PyObject_CAST(obj))
 #endif
 
 
