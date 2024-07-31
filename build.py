@@ -1,14 +1,22 @@
+import os
+
 from setuptools import Extension
 from setuptools.command.build_ext import build_ext
-from setuptools.errors import CCompilerError, ExecError, PlatformError
+
+
+extra_compile_args=["-Wall"]
+if os.name == 'nt':
+    extra_compile_args.append("/Ox")
+else:
+    extra_compile_args.append("-O3")
 
 
 extensions = [
     Extension(
         'ipset_c_ext',
         ['src/ipset_c.c', 'src/net_range_container.c', 'src/net_range.c'],
-        extra_compile_args=["-O3", "-Wall"],
-        py_limited_api=True,
+        extra_compile_args=extra_compile_args,
+        py_limited_api=False,
     ),
 ]
 
