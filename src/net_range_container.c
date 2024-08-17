@@ -266,14 +266,10 @@ findInsertIndexLoop(const NetRangeObject** const array, Py_ssize_t len, const Ne
         }
         else if (compRes == 0) {
             if (i - start > 0) {
-                Py_ssize_t tmpI = findInsertIndexLoop(&array[start], i - start, item, &compRes);
-                if (compRes == 0) {
-                    i = start + tmpI;
-                } else {
-                    compRes = 0;
-                }
+                end = i;
+            } else {
+                break;
             }
-            break;
         }
     }
     *shiftPos = compRes;
@@ -413,7 +409,7 @@ NetRangeContainer_intersection(const NetRangeContainer* self, const NetRangeCont
         i++;
     }
     res->len = resI;
-    for (Py_ssize_t i = 0; i < res->len; i++) {
+    for (i = 0; i < res->len; i++) {
         res->array[i] = NetRangeObject_copy(res->array[i]);
     }
     return res;

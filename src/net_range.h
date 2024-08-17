@@ -22,7 +22,7 @@ NetRangeObject* NetRangeObject_create(void);
 
 void NetRangeObject_destroy(NetRangeObject* const self);
 
-int NetRangeObject_parseCidr(const char* cidr, NetRangeObject* netObj);
+int NetRangeObject_parseCidr(NetRangeObject* const self, const char* const cidr);
 
 int NetRangeObject_comparator(const NetRangeObject **elem1, const NetRangeObject **elem2);
 

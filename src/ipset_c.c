@@ -350,12 +350,12 @@ static PyMethodDef IPSet_tp_methods[] = {
 
 static PyTypeObject IPSetType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "ipset_c.IPSet",
+    .tp_name = "ipset_c_ext.IPSet",
     .tp_doc = "IPSet objects",
     .tp_basicsize = sizeof(IPSet),
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-    .tp_new = IPSet_new,
+    .tp_new = (newfunc)IPSet_new,
     .tp_init = (initproc)IPSet_init,
     .tp_dealloc = (destructor)IPSet_dealloc,
     .tp_as_number = &IPSet_tp_as_number,
@@ -368,7 +368,7 @@ static PyTypeObject IPSetType = {
 
 static PyModuleDef IPSet_module = {
     .m_base = PyModuleDef_HEAD_INIT,
-    .m_name = "ipset_c",
+    .m_name = "ipset_c_ext",
     .m_doc = "ipset_c",
     .m_size = -1,
 };
@@ -385,9 +385,8 @@ PyInit_ipset_c_ext(void)
         return NULL;
     }
 
-    Py_XINCREF(&IPSetType);
-    if (PyModule_AddObjectRef(m, "IPSet", (PyObject *) &IPSetType) < 0) {
-        Py_XDECREF(&IPSetType);
+    Py_INCREF(&IPSetType);
+    if (PyModule_AddObject(m, "IPSet", &IPSetType) < 0) {
         Py_DECREF(m);
         return NULL;
     }

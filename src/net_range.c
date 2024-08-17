@@ -23,7 +23,7 @@ NetRangeObject_copy(const NetRangeObject* const self) {
 
 
 int
-NetRangeObject_parseCidr(const char *cidr, NetRangeObject *netObj) {
+NetRangeObject_parseCidr(NetRangeObject * const self, const char * const cidr) {
     char tmpcidr[IPV4_MAX_STRING_LEN];
     strncpy(tmpcidr, cidr, IPV4_MAX_STRING_LEN);
     tmpcidr[IPV4_MAX_STRING_LEN - 1] = '\0';
@@ -44,15 +44,15 @@ NetRangeObject_parseCidr(const char *cidr, NetRangeObject *netObj) {
     if (inet_pton(AF_INET, tmpcidr, buf) != 1) {
         return -1;
     }
-    netObj->first =
+    self->first =
         (buf[0] << 24) |
         (buf[1] << 16) |
         (buf[2] << 8) |
         (buf[3]);
-    netObj->len = len;
+    self->len = len;
     PY_UINT32_T mask = MASK_MAP[len];
-    netObj->first &= mask;
-    netObj->last = netObj->first | ~mask;
+    self->first &= mask;
+    self->last = self->first | ~mask;
     return 0;
 }
 
