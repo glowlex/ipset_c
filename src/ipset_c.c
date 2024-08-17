@@ -7,7 +7,7 @@ static NetRangeObject* getNetRangeFromPy(PyObject* cidr);
 #define IPSET_TYPE_CHECK(ipset) \
 do { \
     if (Py_TYPE(ipset) != &IPSetType) {\
-        PyErr_Format(PyExc_ValueError, "arg should be IPSet type");\
+        PyErr_Format(PyExc_TypeError, "arg must be an IPSet type");\
         return NULL;\
     }\
 } while(0)
@@ -38,7 +38,7 @@ IPSet_init(IPSet *self, PyObject *args)
         return -1;
     }
 
-    static char errMes[] = "nets should be list or tuple";
+    static char errMes[] = "cidrs must be a list or tuple";
     PyObject *it = PySequence_Fast(nets, errMes);
     // string also valid
     if (it == NULL){
@@ -74,17 +74,16 @@ error:
 static NetRangeObject*
 getNetRangeFromPy(PyObject* cidr) {
     if (!PyUnicode_Check(cidr)) {
-        PyErr_Format(PyExc_ValueError, "cidr should be string");
+        PyErr_Format(PyExc_TypeError, "cidr must be a string");
         return NULL;
     }
-    NetRangeObject* netRange = NetRangeObject_create();
     const char* cidrUtf8 = PyUnicode_AsUTF8(cidr);
     if (cidrUtf8 == NULL) {
         goto error;
     }
     Py_ssize_t code = NetRangeObject_parseCidr(cidrUtf8, netRange);
     if (code) {
-        PyErr_Format(PyExc_ValueError, "cidr is not valid %s", PyUnicode_AsUTF8(cidr));
+        PyErr_Format(PyExc_ValueError, "%s is not a valid cidr", cidrUtf8);
         goto error;
     }
     return netRange;

@@ -25,8 +25,18 @@ def testIPSetCreate(data: List[str], expected):
 @pytest.mark.parametrize("data", [
     5,
     [{}],
-    "9.9.9.9/32",
     ["0.0.0.0/0", 5],
+    [["1.1.1.1/33"]],
+    None,
+    # "9.9.9.9/32",  # PySequence_Fast
+])
+def testIPSetCreateTypeError(data):
+    import ipset_c
+    with pytest.raises(TypeError):
+        ipset_c.IPSet(data).getCidrs()
+
+
+@pytest.mark.parametrize("data", [
     ["1.1.1.1/33"],
     ["333.1.1.1/32"],
     ["1.-1.1.1/32"],
@@ -35,13 +45,11 @@ def testIPSetCreate(data: List[str], expected):
     ["1.1.1/32"],
     ['111.111.111.😊'],
     ["test"],
-    [["1.1.1.1/33"]],
     ["11111111111111111111111111111111111111111111111111111111111"],
-    None,
 ])
-def testIPSetCreateError(data):
+def testIPSetCreateValueError(data):
     import ipset_c
-    with pytest.raises((ValueError, TypeError)):
+    with pytest.raises(ValueError):
         ipset_c.IPSet(data).getCidrs()
 
 
@@ -117,6 +125,7 @@ def testAddCidr(data, cidrs, expected):
     (["0.0.0.0/0"], ["0.0.0.65/32"], ["0.0.0.0/26", "0.0.0.64/32", "0.0.0.66/31", "0.0.0.68/30", "0.0.0.72/29", "0.0.0.80/28", "0.0.0.96/27", "0.0.0.128/25", "0.0.1.0/24", "0.0.2.0/23", "0.0.4.0/22", "0.0.8.0/21", "0.0.16.0/20", "0.0.32.0/19", "0.0.64.0/18", "0.0.128.0/17", "0.1.0.0/16", "0.2.0.0/15", "0.4.0.0/14", "0.8.0.0/13", "0.16.0.0/12", "0.32.0.0/11", "0.64.0.0/10", "0.128.0.0/9", "1.0.0.0/8", "2.0.0.0/7", "4.0.0.0/6", "8.0.0.0/5", "16.0.0.0/4", "32.0.0.0/3", "64.0.0.0/2", "128.0.0.0/1"]),
     (["0.0.0.0/0"], ["255.255.255.255/32"], ["0.0.0.0/1", "128.0.0.0/2", "192.0.0.0/3", "224.0.0.0/4", "240.0.0.0/5", "248.0.0.0/6", "252.0.0.0/7", "254.0.0.0/8", "255.0.0.0/9", "255.128.0.0/10", "255.192.0.0/11", "255.224.0.0/12", "255.240.0.0/13", "255.248.0.0/14", "255.252.0.0/15", "255.254.0.0/16", "255.255.0.0/17", "255.255.128.0/18", "255.255.192.0/19", "255.255.224.0/20", "255.255.240.0/21", "255.255.248.0/22", "255.255.252.0/23", "255.255.254.0/24", "255.255.255.0/25", "255.255.255.128/26", "255.255.255.192/27", "255.255.255.224/28", "255.255.255.240/29", "255.255.255.248/30", "255.255.255.252/31", "255.255.255.254/32"]),
     (["0.0.0.2/32", "0.0.0.5/32"], ["0.0.0.0/24"], []),
+    (["0.0.0.2/32", "0.0.0.5/32"], ["5.0.0.0/32"], ["0.0.0.2/32", "0.0.0.5/32"]),
 ])
 def testRemoveCidrValid(data, cidrs, expected):
     import ipset_c
@@ -128,14 +137,29 @@ def testRemoveCidrValid(data, cidrs, expected):
 
 
 @pytest.mark.parametrize("data, cidr", [
-    ([], "200.2005.77.77/32"),
     ([], 8),
     ([], ["200.200.77.77/32"]),
     ([], None),
-    ([], "11111111111111111111111111111111111111111111111111111111111"),
     ([], {}),
 ])
-def testCidrGenericError(data, cidr):
+def testCidrTypeError(data, cidr):
+    import ipset_c
+    obj = ipset_c.IPSet(data)
+    with pytest.raises(TypeError):
+        obj.isContainsCidr(cidr)
+    with pytest.raises(TypeError):
+        obj.isIntersectsCidr(cidr)
+    with pytest.raises(TypeError):
+        obj.addCidr(cidr)
+    with pytest.raises(TypeError):
+        obj.removeCidr(cidr)
+
+
+@pytest.mark.parametrize("data, cidr", [
+    ([], "200.2005.77.77/32"),
+    ([], "11111111111111111111111111111111111111111111111111111111111"),
+])
+def testCidrValueError(data, cidr):
     import ipset_c
     obj = ipset_c.IPSet(data)
     with pytest.raises(ValueError):

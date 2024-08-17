@@ -213,26 +213,26 @@ def testIPSetLen(data, expected):
     ([], 8),
     ([], ["200.200.77.77/32"]),
 ])
-def testIPSetGenericError(data, sec):
+def testIPSetTypeError(data, sec):
     import ipset_c
     ipset = ipset_c.IPSet(data)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         v = ipset - sec
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         v = ipset + sec
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         v = ipset | sec
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         v = ipset & sec
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         ipset_c.IPSet(data).isSubset(sec)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         ipset_c.IPSet(data).isSuperset(sec)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         v = ipset_c.IPSet(data) >= sec
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         v = ipset_c.IPSet(data) <= sec
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         ipset_c.IPSet(data).isSubset(sec)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         v = ipset == sec
