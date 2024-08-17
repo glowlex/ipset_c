@@ -24,8 +24,10 @@ IPSet_dealloc(IPSet *self)
 static PyObject*
 IPSet_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 {
-    IPSet* self = NULL;
-    self = (IPSet*)type->tp_alloc(type, 0);
+    IPSet* self = (IPSet*)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->netsContainer = NULL;
+    }
     return (PyObject*)self;
 }
 
@@ -79,9 +81,13 @@ getNetRangeFromPy(PyObject* cidr) {
     }
     const char* cidrUtf8 = PyUnicode_AsUTF8(cidr);
     if (cidrUtf8 == NULL) {
-        goto error;
+        return NULL;
     }
-    Py_ssize_t code = NetRangeObject_parseCidr(cidrUtf8, netRange);
+    NetRangeObject* netRange = NetRangeObject_create();
+    if (netRange == NULL) {
+        return NULL;
+    }
+    int code = NetRangeObject_parseCidr(netRange, cidrUtf8);
     if (code) {
         PyErr_Format(PyExc_ValueError, "%s is not a valid cidr", cidrUtf8);
         goto error;
@@ -193,7 +199,7 @@ IPSet_copy(IPSet* self) {
     res->netsContainer = NetRangeContainer_copy(self->netsContainer);
     if (res->netsContainer == NULL) {
         Py_XDECREF(res);
-        res = NULL;
+        goto exit;
     }
 exit:
     return res;
@@ -209,6 +215,9 @@ IPSet__or__(IPSet* self, IPSet* other) {
         self = tmp;
     }
     IPSet* res = IPSet_copy(self);
+    if (res == NULL) {
+        return res;
+    }
     for (Py_ssize_t i = 0; i < other->netsContainer->len; i++) {
         NetRangeContainer_addNetRange(res->netsContainer, NetRangeObject_copy(other->netsContainer->array[i]));
     }
@@ -220,9 +229,13 @@ static IPSet*
 IPSet__subtract__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     IPSet* res = IPSet_copy(self);
+    if (res == NULL) {
+        goto exit;
+    }
     for (Py_ssize_t i = 0; i < other->netsContainer->len; i++) {
         NetRangeContainer_removeNetRange(res->netsContainer, other->netsContainer->array[i]);
     }
+exit:
     return res;
 }
 
@@ -232,6 +245,9 @@ IPSet__and__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     NetRangeContainer* cont = NetRangeContainer_intersection(self->netsContainer, other->netsContainer);
     IPSet* res = createIPSet();
+    if (res == NULL) {
+        return NULL;
+    }
     NetRangeContainer_destroy(res->netsContainer);
     res->netsContainer = cont;
     return res;

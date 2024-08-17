@@ -144,12 +144,12 @@ NetRangeContainer*
 NetRangeContainer_create(const Py_ssize_t nelem) {
     NetRangeContainer *c = PyMem_Malloc(sizeof(*c));
     if (c == NULL) {
-        return (void *)PyErr_NoMemory();
+        return (NetRangeContainer*)PyErr_NoMemory();
     }
     c->array = PyMem_Calloc(max(nelem, 1), sizeof(*c->array));
     if (c->array == NULL) {
         NetRangeContainer_destroy(c);
-        return (void *)PyErr_NoMemory();
+        return (NetRangeContainer*)PyErr_NoMemory();
     }
     c->len = 0;
     c->allocatedLen = max(nelem, 1);
@@ -324,7 +324,9 @@ spliceNetRangeObject(NetRangeObject** cont, const NetRangeObject *const sub) {
     r--;
     PY_UINT32_T prefIdx = base->len + 1, l = 0;
     for (; prefIdx <= sub->len; prefIdx++) {
-        upperPart = NetRangeObject_create();
+        if ((upperPart = NetRangeObject_create()) == NULL) {
+            return;
+        }
         upperPart->len = prefIdx;
         upperPart->first = base->last & MASK_MAP[prefIdx];
         upperPart->last = base->last;

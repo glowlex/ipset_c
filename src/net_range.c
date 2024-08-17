@@ -3,13 +3,20 @@
 
 NetRangeObject*
 NetRangeObject_create(void) {
-    return PyMem_Malloc(sizeof(NetRangeObject));
+    NetRangeObject* self = PyMem_Malloc(sizeof(NetRangeObject));
+    if (self == NULL) {
+        return (NetRangeObject*)PyErr_NoMemory();
+    }
+    return self;
 }
 
 
 NetRangeObject*
 NetRangeObject_copy(const NetRangeObject* const self) {
     NetRangeObject *newItem = NetRangeObject_create();
+    if (newItem == NULL) {
+        return NULL;
+    }
     memcpy(newItem, self, sizeof(*newItem));
     return newItem;
 }
