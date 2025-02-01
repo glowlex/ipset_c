@@ -38,7 +38,7 @@ mergeNetRangesArray(NetRangeObject** array, const Py_ssize_t size) {
         }
         baseNode = array[base];
         nextNode = array[next];
-        if (baseNode->len && baseNode->len == nextNode->len && baseNode->last < nextNode->first) {
+        if (baseNode->len == nextNode->len && baseNode->last < nextNode->first) {
             mask = MASK_MAP[baseNode->len - 1];
             if ((baseNode->first & mask) == (nextNode->first & mask)) {
                 baseNode->last = nextNode->last;
@@ -77,9 +77,8 @@ mergeNetRangesArray(NetRangeObject** array, const Py_ssize_t size) {
 
 
 static void
-removeGapsFromNetRanges(NetRangeContainer *const self) {
-    // TODO change to array with size to able set start
-    Py_ssize_t base = 0, next = 0;
+removeGapsFromNetRanges(NetRangeContainer *const self, Py_ssize_t start) {
+    Py_ssize_t base = start, next = start;
     NetRangeObject** array = self->array;
     while (base < self->len) {
         while (base < self->len && array[base] != NULL) {
@@ -129,7 +128,7 @@ mergeNetRanges(NetRangeContainer *const  self) {
     Py_ssize_t changesNum = 0;
     changesNum = mergeNetRangesArray(self->array, self->len);
     if (changesNum) {
-        removeGapsFromNetRanges(self);
+        removeGapsFromNetRanges(self, 0);
     }
 }
 
@@ -296,11 +295,11 @@ NetRangeContainer_addNetRange (NetRangeContainer *const self, NetRangeObject* it
         }
         memmove(self->array + i + 1, self->array + i, (self->len - i) * sizeof(NetRangeObject*));
         self->array[i] = item;
-        self->len += 1;
+        self->len++;
         Py_ssize_t startIdx = max(i - item->len, 0);
         Py_ssize_t changesNum = mergeNetRangesArray(&self->array[startIdx], self->len - startIdx);
         if (changesNum) {
-            removeGapsFromNetRanges(self);
+            removeGapsFromNetRanges(self, startIdx);
         }
         return 1;
     }
@@ -366,7 +365,7 @@ NetRangeContainer_removeNetRange(NetRangeContainer* const self, const NetRangeOb
             else {
                 NetRangeObject_destroy(self->array[i]);
                 self->array[i] = NULL;
-                removeGapsFromNetRanges(self);
+                removeGapsFromNetRanges(self, i);
             }
         }
         else {
