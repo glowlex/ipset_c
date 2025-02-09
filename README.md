@@ -3,7 +3,7 @@
 IPSet is written in C.
 Runs on Windows and Linux.
 Tens of times faster than pure Python netaddr.IPSet.
-Only for IPv4. Not picklable.
+Only for IPv4. Not picklable. Can be compiled for free-threading.
 
 
 ```

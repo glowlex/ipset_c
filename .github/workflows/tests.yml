@@ -13,7 +13,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ "ubuntu-latest", "macos-latest", "windows-latest" ]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
     defaults:
       run:
         shell: bash
@@ -38,13 +38,15 @@ jobs:
         key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
     - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root --sync --without dev
+      run: |
+        poetry lock --no-update
+        poetry install --no-interaction --no-root --sync --without dev
     - name: Build
       run: |
         source $VENV
         poetry build -o dist
-        python tests/pre_src.py
-        pip install dist/ipset_c.tar.gz
+        pip uninstall --yes ipset_c
+        pip install ipset_c --no-index --find-links dist
     - name: Test with pytest
       run: |
         cd tests

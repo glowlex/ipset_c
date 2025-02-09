@@ -23,6 +23,7 @@ classifiers = [
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
     'Programming Language :: C',
     'Programming Language :: Python :: Implementation :: CPython',
     'Topic :: System :: Networking',
@@ -45,16 +46,17 @@ generate-setup-file = true
 
 [tool.poetry.dependencies]
 python = ">=3.8,<4"
-setuptools = "^70.0.0"
-poetry = "^1.8.0"
+setuptools = "*"
 
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.0.0"
 tox = "^4.12.1"
+poetry = "~1"
 
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
+poetry = "~1"
 poethepoet = '^0.25.0'
 
 
