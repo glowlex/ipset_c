@@ -6,7 +6,7 @@ ensureSpareSize(NetRangeContainer* const self, Py_ssize_t nelems) {
     if (self->len + nelems < self->allocatedLen) {
         return 0;
     }
-    const Py_ssize_t newAllocSize = (self->len + nelems);
+    const Py_ssize_t newAllocSize = self->len + nelems*4;
     NetRangeObject** newCont = PyMem_Realloc(self->array, newAllocSize * sizeof(NetRangeObject*));
     if (newCont == NULL) {
         PyErr_NoMemory();
