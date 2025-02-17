@@ -180,11 +180,10 @@ IPSet_removeCidr(IPSet* self, PyObject* cidr) {
 
 static IPSet*
 createIPSet() {
-    PyObject* arg = PyTuple_New(0);
-    PyObject* args = Py_BuildValue("(O)", arg);
+    PyObject* args = PyTuple_New(1);
+    PyTuple_SET_ITEM(args, 0, PyTuple_New(0));
     IPSet* res = (IPSet*)PyObject_CallObject((PyObject*)&IPSetType, args);
-    Py_XDECREF(arg);
-    Py_XDECREF(args);
+    Py_DECREF(args);
     return res;
 }
 

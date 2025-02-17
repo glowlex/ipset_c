@@ -341,6 +341,9 @@ spliceNetRangeObject(NetRangeObject** cont, const NetRangeObject *const sub) {
     if (NULL != upperPart) {
         NetRangeObject_destroy(upperPart);
     }
+    if (base != upperPart && cont[0] != base) {
+        NetRangeObject_destroy(base);
+    }
 }
 
 
