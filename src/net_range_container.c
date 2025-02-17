@@ -381,7 +381,7 @@ NetRangeContainer_removeNetRange(NetRangeContainer* const self, const NetRangeOb
 
 NetRangeContainer* 
 NetRangeContainer_intersection(const NetRangeContainer* self, const NetRangeContainer* other) {
-    NetRangeContainer* res = NetRangeContainer_create(max(self->len, other->len));
+    NetRangeContainer* res = NetRangeContainer_create(self->len + other->len);
     if (res == NULL) {
         return res;
     }
