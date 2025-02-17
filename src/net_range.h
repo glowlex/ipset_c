@@ -24,8 +24,6 @@ void NetRangeObject_destroy(NetRangeObject* const self);
 
 int NetRangeObject_parseCidr(NetRangeObject* const self, const char* const cidr);
 
-int NetRangeObject_comparator(const NetRangeObject **elem1, const NetRangeObject **elem2);
-
 int NetRangeObject_asUtf8CharCidr(const NetRangeObject* const self, char* const str, const Py_ssize_t size);
 
 NetRangeObject* NetRangeObject_copy(const NetRangeObject* const self);

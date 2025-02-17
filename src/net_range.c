@@ -64,18 +64,6 @@ NetRangeObject_destroy(NetRangeObject* const self) {
 
 
 int
-NetRangeObject_comparator(const NetRangeObject** const elem1, const NetRangeObject** const elem2) {
-    if ((*elem1)->first > (*elem2)->first) {
-        return 1;
-    } 
-    if ((*elem1)->first < (*elem2)->first) {
-        return -1;
-    } 
-    return 0;
-}
-
-
-int
 NetRangeObject_asUtf8CharCidr(const NetRangeObject* const self, char* const str, const Py_ssize_t size) {
     Py_UCS1 buf[4];
     *(PY_UINT32_T*)&buf = self->first;

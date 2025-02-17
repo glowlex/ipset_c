@@ -15,7 +15,7 @@ typedef struct {
     Py_ssize_t len;
 } NetRangeContainer;
 
-NetRangeContainer* NetRangeContainer_create(const Py_ssize_t nelem);
+NetRangeContainer* NetRangeContainer_create(Py_ssize_t nelem);
 
 void NetRangeContainer_destroy(NetRangeContainer *const self);
 

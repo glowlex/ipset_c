@@ -56,7 +56,6 @@ mergeNetRangesArray(NetRangeObject** array, const Py_ssize_t size) {
             }
             else {
                 base++;
-                next--;
             }
         }
         else {
@@ -68,7 +67,6 @@ mergeNetRangesArray(NetRangeObject** array, const Py_ssize_t size) {
             }
             else {
                 base++;
-                next--;
             }
         }
     }
@@ -140,18 +138,19 @@ NetRangeContainer_merge(NetRangeContainer *const self) {
 
 
 NetRangeContainer*
-NetRangeContainer_create(const Py_ssize_t nelem) {
+NetRangeContainer_create(Py_ssize_t nelem) {
     NetRangeContainer *c = PyMem_Malloc(sizeof(*c));
     if (c == NULL) {
         return (NetRangeContainer*)PyErr_NoMemory();
     }
-    c->array = PyMem_Calloc(max(nelem, 1), sizeof(*c->array));
+    nelem = max(nelem, 1);
+    c->array = PyMem_Calloc(nelem, sizeof(*c->array));
     if (c->array == NULL) {
         NetRangeContainer_destroy(c);
         return (NetRangeContainer*)PyErr_NoMemory();
     }
     c->len = 0;
-    c->allocatedLen = max(nelem, 1);
+    c->allocatedLen = nelem;
     return c;
 }
 
@@ -263,7 +262,7 @@ findInsertIndexLoop(const NetRangeObject** const array, Py_ssize_t len, const Ne
         else if (compRes < 0) {
             end = i - 1;
         }
-        else if (compRes == 0) {
+        else {
             if (i - start > 0) {
                 end = i;
             } else {
