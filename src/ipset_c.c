@@ -6,7 +6,7 @@ static NetRangeObject* getNetRangeFromPy(PyObject* cidr);
 
 #define IPSET_TYPE_CHECK(ipset) \
 do { \
-    if (Py_TYPE(ipset) != &IPSetType) {\
+    if (!PyType_IsSubtype(Py_TYPE(ipset), &IPSetType)) {\
         PyErr_Format(PyExc_TypeError, "arg must be an IPSet type");\
         return NULL;\
     }\
@@ -102,10 +102,10 @@ error:
 static PyObject*
 IPSet_getCidrs(IPSet *self) {
     PyObject* resList = PyList_New(self->netsContainer->len);
-    char const prefix[IPV4_MAX_STRING_LEN] = "";
+    char const prefix[IPV6_MAX_STRING_LEN] = "";
     const NetRangeObject** const netsArray = self->netsContainer->array;
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
-        NetRangeObject_asUtf8CharCidr((NetRangeObject*)netsArray[i], prefix, IPV4_MAX_STRING_LEN);
+        NetRangeObject_asUtf8CharCidr((NetRangeObject*)netsArray[i], prefix, IPV6_MAX_STRING_LEN);
         PyList_SetItem(resList, i, PyUnicode_FromString(prefix));
     }
     return resList;
@@ -261,7 +261,7 @@ IPSet__eq__(IPSet* self, IPSet* other) {
     }
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
         NetRangeObject* a = self->netsContainer->array[i], *b = other->netsContainer->array[i];
-        if (a->first != b->first || a->len != b->len) {
+        if (!EQ128(a->first, b->first) || a->len != b->len) {
             Py_RETURN_FALSE;
         }
     }
@@ -304,14 +304,29 @@ IPSet__bool__(IPSet* self) {
 }
 
 
-static Py_ssize_t
-IPSet__len__(IPSet* self) {
-    Py_ssize_t res = 0;
+static PyObject*
+IPSet_size(IPSet* self) {
     NetRangeObject** array = self->netsContainer->array;
-    for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
-        res += (Py_ssize_t)(pow(2, 32 - array[i]->len) + 0.5);
+    if (self->netsContainer->len == 1 && array[0]->len == 0 && array[0]->isIPv6) {
+        PyObject* one = PyLong_FromLong(1L);
+        PyObject* shift128 = PyLong_FromLong(128L);
+        PyObject* resObj = PyNumber_Lshift(one, shift128);
+        Py_DECREF(shift128);
+        Py_DECREF(one);
+        return resObj;
     }
-    return res;
+    uint128c res = {.hi=0, .lo=0};
+    for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
+        PY_UINT32_T lenShift = ((array[i]->isIPv6 ? 128:32) - array[i]->len);
+        uint128c localLen = {.hi=0, .lo=0};
+        if (lenShift >= 64) {
+            localLen.hi = (PY_UINT64_T)0b1 << (lenShift - 64);
+        } else {
+            localLen.lo = (PY_UINT64_T)0b1 << lenShift;
+        }
+        res = ADD128(res, localLen);
+    }
+    return PyLong_FromUnsignedNativeBytes((const unsigned char *)&res, 16, -1);
 }
 
 
@@ -329,9 +344,8 @@ static PyNumberMethods IPSet_tp_as_number = {
 };
 
 
-static PySequenceMethods IPSet_tp_as_sequence = {
-    .sq_length = (lenfunc)IPSet__len__,
-};
+// static PySequenceMethods IPSet_tp_as_sequence = {
+// };
 
 
 static PyMethodDef IPSet_tp_methods[] = {
@@ -347,6 +361,12 @@ static PyMethodDef IPSet_tp_methods[] = {
 };
 
 
+static PyGetSetDef IPSet_tp_descr_getset[] = {
+    { "size", (getter)IPSet_size, NULL, NULL},
+    {NULL}
+};
+
+
 static PyTypeObject IPSetType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "ipset_c_ext.IPSet",
@@ -358,10 +378,11 @@ static PyTypeObject IPSetType = {
     .tp_init = (initproc)IPSet_init,
     .tp_dealloc = (destructor)IPSet_dealloc,
     .tp_as_number = &IPSet_tp_as_number,
-    .tp_as_sequence = &IPSet_tp_as_sequence,
+    //.tp_as_sequence = &IPSet_tp_as_sequence,
     //.tp_members = IPSet_members,
     .tp_methods = IPSet_tp_methods,
     .tp_richcompare = (richcmpfunc)IPSet_tp_richcompare,
+    .tp_getset = IPSet_tp_descr_getset,
 };
 
 

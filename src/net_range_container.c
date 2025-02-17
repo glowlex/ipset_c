@@ -21,7 +21,8 @@ ensureSpareSize(NetRangeContainer* const self, Py_ssize_t nelems) {
 inline static Py_ssize_t
 mergeNetRangesArray(NetRangeObject** array, const Py_ssize_t size) {
     Py_ssize_t base = 0, next = 0, changeCounter = 0;
-    PY_UINT32_T mask = 0;
+    uint128c mask;
+
     NetRangeObject* baseNode, * nextNode;
     while (next < size) {
         while (base < size && array[base] == NULL) {
@@ -38,9 +39,11 @@ mergeNetRangesArray(NetRangeObject** array, const Py_ssize_t size) {
         }
         baseNode = array[base];
         nextNode = array[next];
-        if (baseNode->len == nextNode->len && baseNode->last < nextNode->first) {
-            mask = MASK_MAP[baseNode->len - 1];
-            if ((baseNode->first & mask) == (nextNode->first & mask)) {
+        if (baseNode->len == nextNode->len && GT128(nextNode->first, baseNode->last)) {
+            mask = MASK_MAP[baseNode->len - 1 + (baseNode->isIPv6 ? 0:96)];
+            const uint128c a = BAND128(baseNode->first, mask);
+            const uint128c b = BAND128(nextNode->first, mask);
+            if (EQ128(a, b)) {
                 baseNode->last = nextNode->last;
                 baseNode->len--;
                 NetRangeObject_destroy(nextNode);
@@ -59,8 +62,10 @@ mergeNetRangesArray(NetRangeObject** array, const Py_ssize_t size) {
             }
         }
         else {
-            mask = MASK_MAP[baseNode->len];
-            if ((baseNode->first & mask) == (nextNode->first & mask)) {
+            mask = MASK_MAP[baseNode->len + (baseNode->isIPv6 ? 0:96)];
+            const uint128c a = BAND128(baseNode->first, mask);
+            const uint128c b = BAND128(nextNode->first, mask);
+            if (EQ128(a, b)) {
                 NetRangeObject_destroy(nextNode);
                 array[next] = NULL;
                 changeCounter++;
@@ -101,10 +106,10 @@ removeGapsFromNetRanges(NetRangeContainer *const self, Py_ssize_t start) {
 
 static int
 comparatorWithLen(const NetRangeObject **const elem1, const NetRangeObject **const elem2) {
-    if ((*elem1)->first > (*elem2)->first) {
+    if (GT128((*elem1)->first, (*elem2)->first)) {
         return 1;
     } 
-    if ((*elem1)->first < (*elem2)->first) {
+    if (GT128((*elem2)->first, (*elem1)->first)) {
         return -1;
     } 
     if ((*elem1)->len > (*elem2)->len) {
@@ -184,10 +189,10 @@ NetRangeContainer_destroy(NetRangeContainer* self) {
 
 static inline int
 bsearchComparator (const NetRangeObject **const a, const NetRangeObject **const b) {
-    if ((*a)->last > (*b)->last) {
+    if (GT128((*a)->last, (*b)->last)) {
         return 1;
     }
-    if ((*a)->first < (*b)->first) {
+    if (GT128((*b)->first, (*a)->first)) {
         return -1;
     }
     return 0;
@@ -322,11 +327,13 @@ spliceNetRangeObject(NetRangeObject** cont, const NetRangeObject *const sub) {
             return;
         }
         upperPart->len = prefIdx;
-        upperPart->first = base->last & MASK_MAP[prefIdx];
+        upperPart->isIPv6 = base->isIPv6;
+        const uint128c mask = MASK_MAP[prefIdx + (base->isIPv6 ? 0:96)];
+        upperPart->first = BAND128(base->last, mask);
         upperPart->last = base->last;
         base->len = prefIdx;
-        base->last = upperPart->first - 1;
-        if (sub->first > base->last) {
+        base->last = SUBLONG128(upperPart->first, 1);
+        if (GT128(sub->first, base->last)) {
             cont[l] = base;
             base = upperPart;
             l++;
