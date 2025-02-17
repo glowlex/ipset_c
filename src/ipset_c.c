@@ -273,10 +273,10 @@ static PyObject*
 IPSet__neq__(IPSet* self, IPSet* other) {
     PyObject* res = IPSet__eq__(self, other);
     if (Py_IsTrue(res)) {
-        Py_XDECREF(res);
+        Py_DECREF(res);
         Py_RETURN_FALSE;
     }
-    Py_XDECREF(res);
+    Py_DECREF(res);
     Py_RETURN_TRUE;
 }
 
@@ -293,7 +293,7 @@ IPSet_tp_richcompare(IPSet* self, IPSet* other, int op) {
     case(Py_NE):
         return IPSet__neq__(self, other);
     default:
-        return Py_NotImplemented;
+        Py_RETURN_NOTIMPLEMENTED;
     }
 }
 
