@@ -1,3 +1,4 @@
+import sys
 import pytest
 
 
@@ -14,6 +15,7 @@ import pytest
     (["0.0.0.0/0"], ["0.0.0.0/0"], True),
     (["151.206.175.38/32", "221.248.188.240/29"], ["221.248.188.240/29"], True),
     (["1.0.0.0/8", "5.0.0.0/8"], ["1.0.0.0/8", "5.0.0.0/8"], True),
+    (["c7f7:d80f::/32"], ["c7f7:d80f:4048:7b1b::/64", "c7f7:d80f:1::/112"], True),
 ])
 def testIsSuperset(data, other, expected):
     import ipset_c
@@ -37,6 +39,7 @@ def testIsSuperset(data, other, expected):
     (["200.200.77.0/24", "2.200.77.0/24"], ["2.200.77.128/25", "2.200.77.128/27"], False),
     (["2.200.77.0/24", "2.200.77.128/26", "2.200.77.128/29"], ["2.200.77.128/25"], False),
     (["151.206.175.38/32", "221.248.188.240/29"], ["221.248.188.240/29"], False),
+    (["c7f7:d80f:4048:7b1b::/64", "c7f7:d80f:1::/112"], ["c7f7:d80f::/32"], True),
 ])
 def testIsSubset(data, other, expected):
     import ipset_c
@@ -98,6 +101,7 @@ def testIPSetCopyAddRemove(data, cidrs, expected):
     (['12.22.0.0/16'], ['12.22.128.0/24'], ['12.22.0.0/16']),
     (['8.8.0.0/17'], ['8.8.128.0/17'], ['8.8.0.0/16']),
     (['8.8.0.0/32', '10.8.0.0/32'], ['9.8.128.0/32'], ['8.8.0.0/32', '9.8.128.0/32', '10.8.0.0/32']),
+    (["4444::/16"], ["1111::/16"], ["1111::/16", "4444::/16"])
 ])
 def testIPSetUnion(data, add, expected):
     import ipset_c
@@ -130,6 +134,7 @@ def testIPSetUnion(data, add, expected):
         ['8.8.0.0/32', '10.8.0.0/32', '30.0.0.0/9'],
         ['8.8.0.1/32', '10.8.0.1/32', '30.128.0.0/9']
     ),
+    (["8dcf:dcd5::/31"], ["8dcf:dcd5::/32"], ["8dcf:dcd4::/32"]),
 ])
 def testIPSetSubstruct(data, sub, expected):
     import ipset_c
@@ -172,6 +177,12 @@ def testIPSetSubstruct(data, sub, expected):
         ['0.0.0.0/32', '0.0.0.64/32', '0.0.0.128/32', '5.0.0.0/24'],
         ['0.0.0.0/32', '0.0.0.64/32', '0.0.0.128/32', '5.0.0.0/32', '5.0.0.64/32', '5.0.0.128/32'],
     ),
+    (["8dcf:dcd4::/31"], ["8dcf:dcd5::/32"], ["8dcf:dcd5::/32"]),
+    (
+        ['1::/24', '5::/128', '5::128/128'],
+        ['1::/128', '1::128/128', '5::/24'],
+        ['1::/128', '1::128/128', '5::/128', '5::128/128'],
+    ),
 ])
 def testIPSetIntersection(data, intersect, expected):
     import ipset_c
@@ -193,6 +204,8 @@ def testIPSetIntersection(data, intersect, expected):
     (['222.222.222.222/32', '122.222.222.222/32'], ['222.222.222.222/32'], False),
     (['0.0.0.0/16'], ['0.0.0.0/24'], False),
     (['0.0.0.0/24'], ['0.0.0.0/16'], False),
+    (['b4a0:310f:fc01:2732:b179:b518:01b1:04bd'], ['b4a0:310f:fc01:2732:b179:b518:01b1:04bd/128'], True),
+    (['14a0:310f:fc01:2732:b179:b518:01b1:04bd/127'], ['b4a0:310f:fc01:2732:b179:b518:01b1:04bd/127'], False),
 ])
 def testIPSetEqual(data, equal, expected):
     import ipset_c
@@ -218,11 +231,17 @@ def testIPSetBool(data, expected):
     (['156.1.1.1/32'], 1),
     (['156.1.1.1/17'], 2**15),
     (['156.1.1.1/32', '67.9.8.8/30'], 5),
+    (['1f5b:f7fe:1c8c:42b0:92ea:10bc:89c9:811a'], 1),
+    (['1f5b:f7fe:1c8c:42b0:92ea:10bc:89c9:811a/100'], 2**28),
+    (['1f5b:f7fe:1c8c:42b0:92ea:10bc:89c9:811a/0'], 2**128),
+    (['1f5b:f7fe:1c8c:42b0:92ea:10bc:89c9:811a/3'], 2**125),
 ])
-def testIPSetLen(data, expected):
+def testIPSetLenAndSize(data, expected):
     import ipset_c
     ipset = ipset_c.IPSet(data)
-    assert len(ipset) == expected
+    if expected < sys.maxsize:
+        assert len(ipset) == expected
+    assert ipset.size == expected
 
 
 @pytest.mark.parametrize('data,sec', [
