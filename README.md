@@ -5,11 +5,11 @@ Runs on Windows and Linux.
 Tens of times faster than pure Python netaddr.IPSet.
 Supports both IPv4 and IPv6. Not picklable. Can be compiled for free-threading.
 
-[!IMPORTANT]
-Due to the max sequence size in python, using len() with a large IPv6 IPSet raising an error. Use the IPSet([]).size attribute.
+> [!IMPORTANT]
+> Due to the max sequence size in python, using len() with a large IPv6 IPSet raising an error. Use the IPSet([]).size attribute.
 
-[!IMPORTANT]
-Do not mix IPv4 and IPv6 in one IPSet without converting to IPv4-mapped IPv6. For example, instead of "0.0.0.0/32" pass "::ffff:0.0.0.0/128".
+> [!IMPORTANT]
+> Do not mix IPv4 and IPv6 in one IPSet without converting to IPv4-mapped IPv6. For example, instead of "0.0.0.0/32" pass "::ffff:0.0.0.0/128".
 
 ```
 pip install ipset_c
