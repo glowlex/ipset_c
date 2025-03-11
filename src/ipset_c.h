@@ -20,4 +20,12 @@ typedef struct {
     NetRangeContainer *netsContainer;
 } IPSet;
 
+
+typedef struct {
+    long version;
+    long len;
+    NetRangeObject data[];
+} IPSetPickle;
+
+
 PyMODINIT_FUNC PyInit_ipset_c_ext(void);

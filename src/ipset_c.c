@@ -2,6 +2,7 @@
 
 static PyTypeObject IPSetType;
 static NetRangeObject* getNetRangeFromPy(PyObject* cidr);
+#define PICKLE_VERSION 1
 
 
 #define IPSET_TYPE_CHECK(ipset) \
@@ -330,6 +331,55 @@ IPSet_size(IPSet* self) {
 }
 
 
+static PyObject*
+IPSet__getstate__(IPSet* self, PyObject *Py_UNUSED(ignored)) {
+    PyObject* bytes = PyBytes_FromStringAndSize("", sizeof(IPSetPickle) + sizeof(NetRangeObject) * self->netsContainer->len);
+    if (!bytes) {
+        return PyErr_NoMemory();
+    }
+    IPSetPickle* buffer = NULL;
+    Py_ssize_t size = 0;
+    if (PyBytes_AsStringAndSize(bytes, (char**)&buffer, &size) < 0) {
+        return NULL;
+    }
+    buffer->version = PICKLE_VERSION;
+    buffer->len = self->netsContainer->len;
+    for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
+        memcpy(buffer->data + i, self->netsContainer->array[i], sizeof(NetRangeObject));
+    }
+    return bytes;
+}
+
+
+static PyObject*
+IPSet__setstate__(IPSet* self, PyObject *state) {
+    if (!PyBytes_CheckExact(state)) {
+        return PyErr_Format(PyExc_TypeError, "state must be a bytes");
+    }
+    IPSetPickle *buffer = NULL;
+    Py_ssize_t size = 0;
+    if (PyBytes_AsStringAndSize(state, (char**)&buffer, &size) < 0) {
+        return NULL;
+    }
+    if (size < sizeof(IPSetPickle) || size < sizeof(IPSetPickle) + buffer->len * sizeof(NetRangeObject)) {
+        return PyErr_Format(PyExc_ValueError, "state is too short to be a valid pickle");
+    }
+    if (buffer->version != PICKLE_VERSION) {
+        return PyErr_Format(
+            PyExc_ValueError, "Pickle version mismatch. Got version %d but expected version %d.", buffer->version, PICKLE_VERSION
+        );
+    }
+    NetRangeContainer_destroy(self->netsContainer);
+    self->netsContainer = NetRangeContainer_create(buffer->len);
+    for (Py_ssize_t i = 0; i < buffer->len; i++) {
+        self->netsContainer->array[i] = NetRangeObject_create();
+        *(self->netsContainer->array[i]) = buffer->data[i];
+    }
+    self->netsContainer->len = buffer->len;
+    Py_RETURN_NONE;
+}
+
+
 // static PyMemberDef IPSet_members[] = {
 //     {NULL}
 // };
@@ -357,6 +407,8 @@ static PyMethodDef IPSet_tp_methods[] = {
     { "addCidr", (PyCFunction)IPSet_addCidr, METH_O, NULL },
     { "removeCidr", (PyCFunction)IPSet_removeCidr, METH_O, NULL },
     { "copy", (PyCFunction)IPSet_copy, METH_NOARGS, NULL },
+    { "__getstate__", (PyCFunction)IPSet__getstate__, METH_NOARGS, NULL },
+    { "__setstate__", (PyCFunction)IPSet__setstate__, METH_O, NULL },
     {NULL}
 };
 

@@ -1,4 +1,6 @@
+import pickle
 import sys
+
 import pytest
 
 
@@ -275,3 +277,17 @@ def testIPSetTypeError(data, sec):
         ipset_c.IPSet(data).isSubset(sec)
     with pytest.raises(TypeError):
         v = ipset == sec
+
+
+@pytest.mark.parametrize("data", [
+    [],
+    ["0.0.0.0/0"],
+    ["0.0.0.0/32", "5.8.9.0/24", "255.0.0.0/8", "1.1.1.1/32", "3.3.3.3/32"],
+    ["::/0"],
+    ["b4a0:310f:fc01:2732:b179:b518:01b1:04bd/128"],
+])
+def testIPSetPickle(data):
+    import ipset_c
+    ipset = ipset_c.IPSet(data)
+    v = pickle.dumps(ipset)
+    assert ipset == pickle.loads(v)
