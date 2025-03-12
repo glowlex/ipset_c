@@ -106,6 +106,7 @@ def testIsContainsCidr(data, cidr, expected):
     import ipset_c
     res = ipset_c.IPSet(data).isContainsCidr(cidr)
     assert res == expected
+    assert (cidr in ipset_c.IPSet(data)) == expected
 
 
 @pytest.mark.parametrize("data, cidr, expected", [
@@ -246,6 +247,8 @@ def testCidrTypeError(data, cidr):
     obj = ipset_c.IPSet(data)
     with pytest.raises(TypeError):
         obj.isContainsCidr(cidr)
+    with pytest.raises(TypeError):
+        cidr in ipset_c.IPSet(data)
     with pytest.raises(TypeError):
         obj.isIntersectsCidr(cidr)
     with pytest.raises(TypeError):

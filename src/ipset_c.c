@@ -124,6 +124,17 @@ IPSet_isContainsCidr(IPSet *self, PyObject* cidr) {
     return PyBool_FromLong(res >= 0);
 }
 
+
+static int
+IPSet__contains__(IPSet *self, PyObject* cidr) {
+    NetRangeObject* netRange = getNetRangeFromPy(cidr);
+    if (netRange == NULL) {
+        return -1;
+    }
+    return NetRangeContainer_findNetRangeContainsIndex(self->netsContainer, netRange) >= 0;
+}
+
+
 static PyObject*
 IPSet_isIntersectsCidr(IPSet* self, PyObject* cidr) {
     NetRangeObject* netRange = getNetRangeFromPy(cidr);
@@ -394,8 +405,9 @@ static PyNumberMethods IPSet_tp_as_number = {
 };
 
 
-// static PySequenceMethods IPSet_tp_as_sequence = {
-// };
+static PySequenceMethods IPSet_tp_as_sequence = {
+    .sq_contains = (objobjproc)IPSet__contains__,
+};
 
 
 static PyMethodDef IPSet_tp_methods[] = {
@@ -430,7 +442,7 @@ static PyTypeObject IPSetType = {
     .tp_init = (initproc)IPSet_init,
     .tp_dealloc = (destructor)IPSet_dealloc,
     .tp_as_number = &IPSet_tp_as_number,
-    //.tp_as_sequence = &IPSet_tp_as_sequence,
+    .tp_as_sequence = &IPSet_tp_as_sequence,
     //.tp_members = IPSet_members,
     .tp_methods = IPSet_tp_methods,
     .tp_richcompare = (richcmpfunc)IPSet_tp_richcompare,
