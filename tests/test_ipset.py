@@ -4,51 +4,55 @@ import sys
 import pytest
 
 
-@pytest.mark.parametrize("data, other, expected", [
-    ([], ["200.200.77.77/32"], False),
-    ([], ["0.0.0.0/0"], False),
-    (["1.0.0.0/24"], ["1.0.0.0/16"], False),
-    ([], [], True),
-    (["200.200.77.77/32"], [], True),
-    (["200.200.77.77/32"], ["200.200.77.77/32"], True),
-    (["200.200.77.0/24"], ["200.200.77.128/25"], True),
-    (["200.200.77.0/24", "2.200.77.0/24"], ["2.200.77.128/25", "2.200.77.128/27"], True),
-    (["2.200.77.0/24", "2.200.77.128/26", "2.200.77.128/29"], ["2.200.77.128/25"], True),
-    (["0.0.0.0/0"], ["0.0.0.0/0"], True),
-    (["151.206.175.38/32", "221.248.188.240/29"], ["221.248.188.240/29"], True),
-    (["1.0.0.0/8", "5.0.0.0/8"], ["1.0.0.0/8", "5.0.0.0/8"], True),
-    (["c7f7:d80f::/32"], ["c7f7:d80f:4048:7b1b::/64", "c7f7:d80f:1::/112"], True),
+@pytest.mark.parametrize("data, other, expected, expectedGT", [
+    ([], ["200.200.77.77/32"], False, False),
+    ([], ["0.0.0.0/0"], False, False),
+    (["1.0.0.0/24"], ["1.0.0.0/16"], False, False),
+    ([], [], True, False),
+    (["200.200.77.77/32"], [], True, True),
+    (["200.200.77.77/32"], ["200.200.77.77/32"], True, False),
+    (["200.200.77.0/24"], ["200.200.77.128/25"], True, True),
+    (["200.200.77.0/24", "2.200.77.0/24"], ["2.200.77.128/25", "2.200.77.128/27"], True, True),
+    (["2.200.77.0/24", "2.200.77.128/26", "2.200.77.128/29"], ["2.200.77.128/25"], True, True),
+    (["0.0.0.0/0"], ["0.0.0.0/0"], True, False),
+    (["151.206.175.38/32", "221.248.188.240/29"], ["221.248.188.240/29"], True, True),
+    (["1.0.0.0/8", "5.0.0.0/8"], ["1.0.0.0/8", "5.0.0.0/8"], True, False),
+    (["::0/0"], ["::0/0"], True, False),
+    (["c7f7:d80f::/32"], ["c7f7:d80f:4048:7b1b::/64", "c7f7:d80f:1::/112"], True, True),
 ])
-def testIsSuperset(data, other, expected):
+def testIsSupersetAndGT(data, other, expected, expectedGT):
     import ipset_c
     setD = ipset_c.IPSet(data)
     setO = ipset_c.IPSet(other)
     assert setD.isSuperset(setO) == expected
     assert (setD >= setO) == expected
+    assert (setD > setO) == expectedGT
 
 
-@pytest.mark.parametrize("data, other, expected", [
-    ([], [], True),
-    ([], ["200.200.77.77/32"], True),
-    ([], ["0.0.0.0/0"], True),
-    (["1.0.0.0/24"], ["1.0.0.0/16"], True),
-    (["0.0.0.0/0"], ["0.0.0.0/0"], True),
-    (["1.0.0.0/8", "5.0.0.0/8"], ["1.0.0.0/8", "5.0.0.0/8"], True),
-    (["2.200.77.128/25"], ["2.200.77.0/24", "2.200.77.128/26", "2.200.77.128/29"], True),
-    (["200.200.77.77/32"], ["200.200.77.77/32"], True),
-    (["200.200.77.77/32"], [], False),
-    (["200.200.77.0/24"], ["200.200.77.128/25"], False),
-    (["200.200.77.0/24", "2.200.77.0/24"], ["2.200.77.128/25", "2.200.77.128/27"], False),
-    (["2.200.77.0/24", "2.200.77.128/26", "2.200.77.128/29"], ["2.200.77.128/25"], False),
-    (["151.206.175.38/32", "221.248.188.240/29"], ["221.248.188.240/29"], False),
-    (["c7f7:d80f:4048:7b1b::/64", "c7f7:d80f:1::/112"], ["c7f7:d80f::/32"], True),
+@pytest.mark.parametrize("data, other, expected, expectedLT", [
+    ([], [], True, False),
+    ([], ["200.200.77.77/32"], True, True),
+    ([], ["0.0.0.0/0"], True, True),
+    (["1.0.0.0/24"], ["1.0.0.0/16"], True, True),
+    (["0.0.0.0/0"], ["0.0.0.0/0"], True, False),
+    (["1.0.0.0/8", "5.0.0.0/8"], ["1.0.0.0/8", "5.0.0.0/8"], True, False),
+    (["2.200.77.128/25"], ["2.200.77.0/24", "2.200.77.128/26", "2.200.77.128/29"], True, True),
+    (["200.200.77.77/32"], ["200.200.77.77/32"], True, False),
+    (["200.200.77.77/32"], [], False, False),
+    (["200.200.77.0/24"], ["200.200.77.128/25"], False, False),
+    (["200.200.77.0/24", "2.200.77.0/24"], ["2.200.77.128/25", "2.200.77.128/27"], False, False),
+    (["2.200.77.0/24", "2.200.77.128/26", "2.200.77.128/29"], ["2.200.77.128/25"], False, False),
+    (["151.206.175.38/32", "221.248.188.240/29"], ["221.248.188.240/29"], False, False),
+    (["::0/0"], ["::0/0"], True, False),
+    (["c7f7:d80f:4048:7b1b::/64", "c7f7:d80f:1::/112"], ["c7f7:d80f::/32"], True, True),
 ])
-def testIsSubset(data, other, expected):
+def testIsSubsetAndLT(data, other, expected, expectedLT):
     import ipset_c
     setD = ipset_c.IPSet(data)
     setO = ipset_c.IPSet(other)
     assert setD.isSubset(setO) == expected
     assert (setD <= setO) == expected
+    assert (setD < setO) == expectedLT
 
 
 @pytest.mark.parametrize("data,cidrs,expected", [
@@ -272,7 +276,11 @@ def testIPSetTypeError(data, sec):
     with pytest.raises(TypeError):
         v = ipset_c.IPSet(data) >= sec
     with pytest.raises(TypeError):
+        v = ipset_c.IPSet(data) > sec
+    with pytest.raises(TypeError):
         v = ipset_c.IPSet(data) <= sec
+    with pytest.raises(TypeError):
+        v = ipset_c.IPSet(data) > sec
     with pytest.raises(TypeError):
         ipset_c.IPSet(data).isSubset(sec)
     with pytest.raises(TypeError):

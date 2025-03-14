@@ -148,6 +148,32 @@ IPSet_isIntersectsCidr(IPSet* self, PyObject* cidr) {
 
 
 static PyObject*
+IPSet_size(IPSet* self) {
+    NetRangeObject** array = self->netsContainer->array;
+    if (self->netsContainer->len == 1 && array[0]->len == 0 && array[0]->isIPv6) {
+        PyObject* one = PyLong_FromLong(1L);
+        PyObject* shift128 = PyLong_FromLong(128L);
+        PyObject* resObj = PyNumber_Lshift(one, shift128);
+        Py_DECREF(shift128);
+        Py_DECREF(one);
+        return resObj;
+    }
+    uint128c res = {.hi=0, .lo=0};
+    for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
+        PY_UINT32_T lenShift = ((array[i]->isIPv6 ? 128:32) - array[i]->len);
+        uint128c localLen = {.hi=0, .lo=0};
+        if (lenShift >= 64) {
+            localLen.hi = (PY_UINT64_T)0b1 << (lenShift - 64);
+        } else {
+            localLen.lo = (PY_UINT64_T)0b1 << lenShift;
+        }
+        res = ADD128(res, localLen);
+    }
+    return PyLong_FromUnsignedNativeBytes((const unsigned char *)&res, 16, -1);
+}
+
+
+static PyObject*
 IPSet_isSuperset(IPSet *self, IPSet *other) {
     IPSET_TYPE_CHECK(other);
     if (NetRangeContainer_isSuperset(self->netsContainer, other->netsContainer)) {
@@ -158,10 +184,46 @@ IPSet_isSuperset(IPSet *self, IPSet *other) {
 
 
 static PyObject*
+IPSet__gt__(IPSet* self, IPSet* other) {
+    IPSET_TYPE_CHECK(other);
+    if (NetRangeContainer_isSuperset(self->netsContainer, other->netsContainer)) {
+        PyObject *ssize = IPSet_size(self);
+        PyObject *osize = IPSet_size(other);
+        int res = PyObject_RichCompareBool(ssize, osize, Py_GT);
+        Py_DECREF(ssize);
+        Py_DECREF(osize);
+        if (res) {
+            Py_RETURN_TRUE;
+        }
+        Py_RETURN_FALSE;
+    }
+    Py_RETURN_FALSE;
+}
+
+
+static PyObject*
 IPSet_isSubset(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     if (NetRangeContainer_isSuperset(other->netsContainer, self->netsContainer)) {
         Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+
+static PyObject*
+IPSet__lt__(IPSet* self, IPSet* other) {
+    IPSET_TYPE_CHECK(other);
+    if (NetRangeContainer_isSuperset(other->netsContainer, self->netsContainer)) {
+        PyObject *ssize = IPSet_size(self);
+        PyObject *osize = IPSet_size(other);
+        int res = PyObject_RichCompareBool(ssize, osize, Py_LT);
+        Py_DECREF(ssize);
+        Py_DECREF(osize);
+        if (res) {
+            Py_RETURN_TRUE;
+        }
+        Py_RETURN_FALSE;
     }
     Py_RETURN_FALSE;
 }
@@ -298,8 +360,12 @@ IPSet_tp_richcompare(IPSet* self, IPSet* other, int op) {
     switch (op) {
     case(Py_GE):
         return IPSet_isSuperset(self, other);
+    case(Py_GT):
+        return IPSet__gt__(self, other);
     case(Py_LE):
         return IPSet_isSubset(self, other);
+    case(Py_LT):
+        return IPSet__lt__(self, other);
     case(Py_EQ):
         return IPSet__eq__(self, other);
     case(Py_NE):
@@ -313,32 +379,6 @@ IPSet_tp_richcompare(IPSet* self, IPSet* other, int op) {
 static int
 IPSet__bool__(IPSet* self) {
     return self->netsContainer->len > 0;
-}
-
-
-static PyObject*
-IPSet_size(IPSet* self) {
-    NetRangeObject** array = self->netsContainer->array;
-    if (self->netsContainer->len == 1 && array[0]->len == 0 && array[0]->isIPv6) {
-        PyObject* one = PyLong_FromLong(1L);
-        PyObject* shift128 = PyLong_FromLong(128L);
-        PyObject* resObj = PyNumber_Lshift(one, shift128);
-        Py_DECREF(shift128);
-        Py_DECREF(one);
-        return resObj;
-    }
-    uint128c res = {.hi=0, .lo=0};
-    for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
-        PY_UINT32_T lenShift = ((array[i]->isIPv6 ? 128:32) - array[i]->len);
-        uint128c localLen = {.hi=0, .lo=0};
-        if (lenShift >= 64) {
-            localLen.hi = (PY_UINT64_T)0b1 << (lenShift - 64);
-        } else {
-            localLen.lo = (PY_UINT64_T)0b1 << lenShift;
-        }
-        res = ADD128(res, localLen);
-    }
-    return PyLong_FromUnsignedNativeBytes((const unsigned char *)&res, 16, -1);
 }
 
 
