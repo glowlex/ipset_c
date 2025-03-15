@@ -106,7 +106,7 @@ IPSet_getCidrs(IPSet *self) {
     char const prefix[IPV6_MAX_STRING_LEN] = "";
     const NetRangeObject** const netsArray = self->netsContainer->array;
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
-        NetRangeObject_asUtf8CharCidr((NetRangeObject*)netsArray[i], prefix, IPV6_MAX_STRING_LEN);
+        NetRangeObject_asUtf8CharCidr((const NetRangeObject*)netsArray[i], prefix, IPV6_MAX_STRING_LEN);
         PyList_SetItem(resList, i, PyUnicode_FromString(prefix));
     }
     return resList;

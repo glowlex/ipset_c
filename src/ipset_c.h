@@ -23,7 +23,7 @@ typedef struct {
 
 typedef struct {
     long version;
-    long len;
+    Py_ssize_t len;
     NetRangeObject data[];
 } IPSetPickle;
 

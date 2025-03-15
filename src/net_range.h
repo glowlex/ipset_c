@@ -51,7 +51,7 @@ typedef struct {
     uint128c first;
     uint128c last;
     PY_UINT32_T len;
-    int isIPv6;
+    PY_UINT32_T isIPv6;
 } NetRangeObject;
 
 
