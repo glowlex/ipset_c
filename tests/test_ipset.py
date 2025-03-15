@@ -1,7 +1,91 @@
 import pickle
 import sys
+from typing import List
 
 import pytest
+
+
+@pytest.mark.parametrize("data, expected", [
+    ([], []),
+    (["0.0.0.0/0"], ["0.0.0.0/0"]),
+    (["9.9.9.9"], ["9.9.9.9/32"]),
+    (["119.119.4.33/24"], ["119.119.4.0/24"]),
+    (["119.119.4.0/24", "119.119.4.64/26"], ["119.119.4.0/24"]),
+    (["119.119.4.30/32", "119.119.4.31/32"], ["119.119.4.30/31"]),
+    (['0.1.0.0/16', '0.2.0.0/16'], ['0.1.0.0/16', '0.2.0.0/16']),
+    (
+        [
+            "119.119.4.36/30", "119.119.4.32/32", "119.119.4.33/32",
+            "119.119.4.34/32", "119.119.4.35/32", "119.119.4.33/32"
+        ],
+        ["119.119.4.32/29"]
+    ),
+    (
+        ["12.63.82.64/29", "151.224.192.0/22", "151.224.0.0/16", "46.49.213.136/29"],
+        ["12.63.82.64/29", "46.49.213.136/29", "151.224.0.0/16"]
+    ),
+    (["75.154.88.15/17", "75.154.129.104/17"], ["75.154.0.0/16"]),
+    (["62.2.183.127/16", "62.2.205.128/16"], ["62.2.0.0/16"]),
+    (["229.126.135.46/16", "229.51.41.149/16", "229.127.63.104/16",], ["229.51.0.0/16", "229.126.0.0/15"]),
+    (
+        ['f3c9:8af5:873d:3e68:e840:0000::/75', 'f546:1c5e:7d5e:ae9e:b2c0::/74', 'f546:1c5e:7d5e:ae9e:b2c0::/74'],
+        ['f3c9:8af5:873d:3e68:e840::/75', 'f546:1c5e:7d5e:ae9e:b2c0::/74']
+    ),
+    (
+        ['0027:e670:478a:ab08:c845:1260:0f8e:ac25/128', '27:e670:478a:ab08:c845:1260:f8e:ac24/128'],
+        ['27:e670:478a:ab08:c845:1260:f8e:ac24/127']
+    ),
+    (
+        ['0027:e670:478a:ab08:c845:1260:0f8e:ac25/32', '27:e671:478a:ab08:c845:1260:f8e:ac24/32'],
+        ['27:e670::/31']
+    ),
+    (["::ffff:75.154.88.15/113", "::ffff:75.154.129.104/113"], ["::ffff:75.154.0.0/112"]),
+    (
+        ["76aa:b7c4:07d3:a831:b5b4:8dab:38de:1300/127", "76aa:b7c4:07d3:a831:b5b4:8dab:38de:1300/120"],
+        ["76aa:b7c4:7d3:a831:b5b4:8dab:38de:1300/120"]
+    ),
+])
+def testIPSetCreate(data: List[str], expected):
+    import ipset_c
+    res = ipset_c.IPSet(data).getCidrs()
+    assert res == expected
+
+
+@pytest.mark.parametrize("data", [
+    5,
+    [{}],
+    ["0.0.0.0/0", 5],
+    [["1.1.1.1/33"]],
+    None,
+    # "9.9.9.9/32",  # PySequence_Fast
+])
+def testIPSetCreateTypeError(data):
+    import ipset_c
+    with pytest.raises(TypeError):
+        ipset_c.IPSet(data)
+
+
+@pytest.mark.parametrize("data", [
+    ["1.1.1.1/33"],
+    ["1.1.1.1/a"],
+    ["1.1.1.1/😊"],
+    ["1.1.1.1:"],
+    ["333.1.1.1/32"],
+    ["1.-1.1.1/32"],
+    ["1.1.1.1/-32"],
+    ["9.9.9.9/"],
+    ["1.1.1/32"],
+    ['111.111.111.😊'],
+    ["test"],
+    ["11111111111111111111111111111111111111111111111111111111111"],
+    ['27:e670::/129'],
+    ['::27:e670::/127'],
+    ['27:e1670::/120'],
+])
+def testIPSetCreateValueError(data):
+    import ipset_c
+    with pytest.raises(ValueError):
+        ipset_c.IPSet(data)
 
 
 @pytest.mark.parametrize("data, other, expected, expectedGT", [
@@ -100,6 +184,7 @@ def testIPSetCopyAddRemove(data, cidrs, expected):
 
 @pytest.mark.parametrize('data, add, expected', [
     ([], [], []),
+    (['0.0.0.0/0'], ['0.0.0.0/0'], ['0.0.0.0/0']),
     (['8.8.8.8/32'], [], ['8.8.8.8/32']),
     ([], ['8.8.8.8/32'], ['8.8.8.8/32']),
     (['8.8.8.8/32'], ['8.8.8.8/32'], ['8.8.8.8/32']),
@@ -107,6 +192,7 @@ def testIPSetCopyAddRemove(data, cidrs, expected):
     (['12.22.0.0/16'], ['12.22.128.0/24'], ['12.22.0.0/16']),
     (['8.8.0.0/17'], ['8.8.128.0/17'], ['8.8.0.0/16']),
     (['8.8.0.0/32', '10.8.0.0/32'], ['9.8.128.0/32'], ['8.8.0.0/32', '9.8.128.0/32', '10.8.0.0/32']),
+    (['::/0'], ['::/0'], ['::/0']),
     (["4444::/16"], ["1111::/16"], ["1111::/16", "4444::/16"])
 ])
 def testIPSetUnion(data, add, expected):
@@ -232,6 +318,7 @@ def testIPSetIntersection(data, intersect, expected):
     (['0.0.0.0/24'], ['0.0.0.0/16'], False),
     (['b4a0:310f:fc01:2732:b179:b518:01b1:04bd'], ['b4a0:310f:fc01:2732:b179:b518:01b1:04bd/128'], True),
     (['14a0:310f:fc01:2732:b179:b518:01b1:04bd/127'], ['b4a0:310f:fc01:2732:b179:b518:01b1:04bd/127'], False),
+    (['b4a0:310f:fc01:2732:b179:b518:01b1:04bd'], ['b4a0:310f:fc01:2732:b179:b518:01b1:04bc/128'], False),
 ])
 def testIPSetEqual(data, equal, expected):
     import ipset_c
@@ -302,7 +389,7 @@ def testIPSetTypeError(data, sec):
     with pytest.raises(TypeError):
         v = ipset_c.IPSet(data) <= sec
     with pytest.raises(TypeError):
-        v = ipset_c.IPSet(data) > sec
+        v = ipset_c.IPSet(data) < sec
     with pytest.raises(TypeError):
         ipset_c.IPSet(data).isSubset(sec)
     with pytest.raises(TypeError):
