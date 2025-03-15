@@ -299,6 +299,43 @@ IPSet__or__(IPSet* self, IPSet* other) {
 
 
 static IPSet*
+IPSet__xor__(IPSet* self, IPSet* other) {
+    IPSET_TYPE_CHECK(other);
+    NetRangeContainer *scont = NetRangeContainer_copy(self->netsContainer);
+    if (scont == NULL) {
+        return NULL;
+    }
+    NetRangeContainer *ocont = NetRangeContainer_copy(other->netsContainer);
+    if (ocont == NULL) {
+        return NULL;
+    }
+    for (Py_ssize_t i = 0; i < other->netsContainer->len; i++) {
+        NetRangeContainer_removeNetRange(scont, other->netsContainer->array[i]);
+    }
+    for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
+        NetRangeContainer_removeNetRange(ocont, self->netsContainer->array[i]);
+    }
+    if (scont->len < ocont->len) {
+        NetRangeContainer* tmp = scont;
+        scont = ocont;
+        scont = tmp;
+    }
+    for (Py_ssize_t i = 0; i < ocont->len; i++) {
+        NetRangeContainer_addNetRange(scont, ocont->array[i]);
+    }
+    ocont->len = 0;
+    NetRangeContainer_destroy(ocont);
+    IPSet* res = createIPSet();
+    if (res == NULL) {
+        return res;
+    }
+    NetRangeContainer_destroy(res->netsContainer);
+    res->netsContainer = scont;
+    return res;
+}
+
+
+static IPSet*
 IPSet__subtract__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     IPSet* res = IPSet_copy(self);
@@ -442,6 +479,7 @@ static PyNumberMethods IPSet_tp_as_number = {
     .nb_subtract = (binaryfunc)IPSet__subtract__,
     .nb_and = (binaryfunc)IPSet__and__,
     .nb_bool = (inquiry)IPSet__bool__,
+    .nb_xor = (binaryfunc)IPSet__xor__,
 };
 
 

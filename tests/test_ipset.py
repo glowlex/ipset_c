@@ -127,6 +127,26 @@ def testIPSetUnion(data, add, expected):
         assert final.getCidrs() == expected
 
 
+@pytest.mark.parametrize('data, add, expected', [
+    ([], [], []),
+    (['8.8.8.8/32'], [], ['8.8.8.8/32']),
+    ([], ['8.8.8.8/32'], ['8.8.8.8/32']),
+    (['0.0.0.0/0'], ['0.0.0.0/0'], []),
+    (['8.8.8.8/32'], ['8.8.8.8/32'], []),
+    (['12.22.128.0/20'], ['12.22.128.0/24'], ['12.22.129.0/24', '12.22.130.0/23', '12.22.132.0/22', '12.22.136.0/21']),
+    (['8.8.0.0/17'], ['8.8.128.0/17'], ['8.8.0.0/16']),
+    (['8.8.0.0/32', '10.8.0.0/32'], ['9.8.128.0/32'], ['8.8.0.0/32', '9.8.128.0/32', '10.8.0.0/32']),
+    (['::/0'], ['::/0'], []),
+    (["4444::/16"], ["1111::/16"], ["1111::/16", "4444::/16"])
+])
+def testIPSetXor(data, add, expected):
+    import ipset_c
+    ipset = ipset_c.IPSet(data)
+    ipsetAdd = ipset_c.IPSet(add)
+    ipsetFinal = ipset ^ ipsetAdd
+    assert ipsetFinal.getCidrs() == expected
+
+
 @pytest.mark.parametrize('data, sub, expected', [
     ([], [], []),
     (['8.8.8.8/32'], [], ['8.8.8.8/32']),
@@ -267,6 +287,8 @@ def testIPSetTypeError(data, sec):
         v = ipset + sec
     with pytest.raises(TypeError):
         v = ipset | sec
+    with pytest.raises(TypeError):
+        v = ipset ^ sec
     with pytest.raises(TypeError):
         v = ipset & sec
     with pytest.raises(TypeError):
