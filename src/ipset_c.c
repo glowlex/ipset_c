@@ -131,7 +131,9 @@ IPSet__contains__(IPSet *self, PyObject* cidr) {
     if (netRange == NULL) {
         return -1;
     }
-    return NetRangeContainer_findNetRangeContainsIndex(self->netsContainer, netRange) >= 0;
+    const Py_ssize_t res = NetRangeContainer_findNetRangeContainsIndex(self->netsContainer, netRange) >= 0;
+    NetRangeObject_destroy(netRange);
+    return res;
 }
 
 
