@@ -33,27 +33,91 @@ class IPSet:
 
     def __bool__(self) -> bool: ...
 
-    def __len__(self) -> int: ...
+    def __len__(self) -> int:
+        '''
+        Due to the max sequence size in python(sys.maxsize), using len() with a large IPv6 IPSet raising an error.
+        Use the IPSet([]).size attribute instead.
+        '''
 
-    def __repr__(self) -> str: ...
+    def __repr__(self) -> str:
+        '''
+        Returns a string representation of the IPSet object.
+        >>> str(IPSet(["5.5.5.4/30"]))
+        "IPSet(['5.5.5.4/30'])"
+        '''
+
+    def __getstate__(self) -> bytes: ...
+
+    def __setstate__(self, state: bytes) -> None: ...
 
     def __contains__(self, cidr: str) -> bool: ...
 
     @property
-    def size(self) -> int: ...
+    def size(self) -> int:
+        '''
+        Returns the number of IPs in the IPSet.
+        >>> IPSet(["5.5.5.4/30"]).size
+        4
+        '''
 
-    def isContainsCidr(self, cidr: str, /) -> bool: ...
+    def isContainsCidr(self, cidr: str, /) -> bool:
+        '''
+        Returns True if the IPSet contains the given CIDR.
+        >>> IPSet(["5.5.5.4/30"]).isContainsCidr("5.5.5.4/32")
+        True
+        '''
 
-    def isIntersectsCidr(self, cidr: str, /) -> bool: ...
+    def isIntersectsCidr(self, cidr: str, /) -> bool:
+        '''
+        Returns True if the IPSet intersects with the given CIDR.
+        >>> IPSet(["5.5.5.4/30"]).isIntersectsCidr("5.5.5.0/24")
+        True
+        '''
 
-    def isSubset(self, other: "IPSet", /) -> bool: ...
+    def isSubset(self, other: "IPSet", /) -> bool:
+        '''
+        Returns True if the IPSet is a subset of the given IPSet.
+        >>> IPSet(["5.5.5.4/30"]).isSubset(IPSet(["5.5.5.4/28"]))
+        True
+        '''
 
-    def isSuperset(self, other: "IPSet", /) -> bool: ...
+    def isSuperset(self, other: "IPSet", /) -> bool:
+        '''
+        Returns True if the IPSet is a superset of the given IPSet.
+        >>> IPSet(["5.5.5.4/28"]).isSuperset(IPSet(["5.5.5.4/30"]))
+        True
+        '''
 
-    def getCidrs(self) -> List[str]: ...
+    def getCidrs(self) -> List[str]:
+        '''
+        Returns a list of CIDRs that the IPSet contains.
+        >>> IPSet(["5.5.5.4/30"]).getCidrs()
+        ['5.5.5.4/30']
+        '''
 
-    def addCidr(self, cidr: str, /) -> None: ...
+    def addCidr(self, cidr: str, /) -> None:
+        '''
+        Adds a CIDR to the IPSet.
+        >>> ipset = IPSet(["5.5.5.4/30"])
+        >>> ipset.addCidr("5.5.5.8/32")
+        >>> ipset.getCidrs()
+        ['5.5.5.4/30', '5.5.5.8/32']
+        '''
 
-    def removeCidr(self, cidr: str, /) -> None: ...
+    def removeCidr(self, cidr: str, /) -> None:
+        '''
+        Removes a CIDR from the IPSet.
+        >>> ipset = IPSet(["5.5.5.4/30", "5.5.5.8/32"])
+        >>> ipset.removeCidr("5.5.5.8/32")
+        >>> ipset.getCidrs()
+        ['5.5.5.4/30']
+        '''
 
-    def copy(self) -> "IPSet": ...
+    def copy(self) -> "IPSet":
+        '''
+        Returns a new IPSet with the same CIDRs as this one.
+        >>> ipset = IPSet(["5.5.5.4/30", "5.5.5.8/32"])
+        >>> ipsetCopy = ipset.copy()
+        >>> ipsetCopy.getCidrs()
+        ['5.5.5.4/30', '5.5.5.8/32']
+        '''
