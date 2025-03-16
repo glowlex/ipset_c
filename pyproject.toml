@@ -4,13 +4,13 @@
 
 [tool.poetry]
 name = "ipset_c"
-version = "0.1.0.dev4"
+version = "0.1.0"
 description = "IPSet written in C"
 readme = "README.md"
 authors = ["glowlex <antonioavocado777@gmail.com>"]
 license = "LGPL"
 classifiers = [
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',
     'Intended Audience :: Information Technology',
     'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
@@ -27,6 +27,7 @@ classifiers = [
     'Programming Language :: C',
     'Programming Language :: Python :: Implementation :: CPython',
     'Topic :: System :: Networking',
+    'Topic :: System :: Networking :: Firewalls',
     'Topic :: Software Development',
     'Topic :: Software Development :: Libraries',
     'Topic :: Software Development :: Libraries :: Python Modules',
