@@ -423,7 +423,7 @@ IPSet__bool__(IPSet* self) {
 
 static PyObject*
 IPSet__getstate__(IPSet* self, PyObject *Py_UNUSED(ignored)) {
-    PyObject* bytes = PyBytes_FromStringAndSize("", sizeof(IPSetPickle) + sizeof(NetRangeObject) * self->netsContainer->len);
+    PyObject* bytes = PyBytes_FromStringAndSize(NULL, sizeof(IPSetPickle) + sizeof(NetRangeObject) * self->netsContainer->len);
     if (!bytes) {
         return PyErr_NoMemory();
     }

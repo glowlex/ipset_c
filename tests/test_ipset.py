@@ -1,3 +1,4 @@
+import ipaddress
 import pickle
 import sys
 from typing import List
@@ -43,6 +44,10 @@ import pytest
     (
         ["76aa:b7c4:07d3:a831:b5b4:8dab:38de:1300/127", "76aa:b7c4:07d3:a831:b5b4:8dab:38de:1300/120"],
         ["76aa:b7c4:7d3:a831:b5b4:8dab:38de:1300/120"]
+    ),
+    (
+        [str(ipaddress.IPv4Network(x)) for x in range(0, 100_000, 2)],
+        [str(ipaddress.IPv4Network(x)) for x in range(0, 100_000, 2)],
     ),
 ])
 def testIPSetCreate(data: List[str], expected):
@@ -402,6 +407,7 @@ def testIPSetTypeError(data, sec):
     ["0.0.0.0/32", "5.8.9.0/24", "255.0.0.0/8", "1.1.1.1/32", "3.3.3.3/32"],
     ["::/0"],
     ["b4a0:310f:fc01:2732:b179:b518:01b1:04bd/128"],
+    [str(ipaddress.IPv4Network(x)) for x in range(0, 100_000, 2)],
 ])
 def testIPSetPickle(data):
     import ipset_c
