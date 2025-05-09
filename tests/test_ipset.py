@@ -49,8 +49,12 @@ import pytest
         [str(ipaddress.IPv4Network(x)) for x in range(0, 100_000, 2)],
         [str(ipaddress.IPv4Network(x)) for x in range(0, 100_000, 2)],
     ),
+    (iter(["9.9.9.9"]), ["9.9.9.9/32"]),
+    ((x for x in ["9.9.9.9"]), ["9.9.9.9/32"]),
+    (tuple(["9.9.9.9"]), ["9.9.9.9/32"]),
+    (set(["9.9.9.9"]), ["9.9.9.9/32"]),
 ])
-def testIPSetCreate(data: List[str], expected):
+def testIPSetCreate(data, expected):
     import ipset_c
     res = ipset_c.IPSet(data).getCidrs()
     assert res == expected

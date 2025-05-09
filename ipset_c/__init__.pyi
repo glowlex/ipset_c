@@ -1,8 +1,8 @@
-from typing import List, Sequence
+from typing import List, Iterable
 
 
 class IPSet:
-    def __init__(self, cidrs: Sequence[str], /) -> None:
+    def __init__(self, cidrs: Iterable[str], /) -> None:
         """
         Do not mix IPv4 and IPv6 in one IPSet without converting to IPv4-mapped IPv6.
         For example, instead of "0.0.0.0/32" pass "::ffff:0.0.0.0/128".
