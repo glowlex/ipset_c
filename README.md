@@ -29,6 +29,7 @@ a.getCidrs()  # ['8.8.8.8/30', '12.12.12.0/24']
 b = IPSet(['12.12.12.0/25'])
 a.isSubset(b)  # False
 a.isSuperset(b)  # True
+a.isIntersects(b)  # True
 a == b  # False
 a < b  # False
 a <= b  # False

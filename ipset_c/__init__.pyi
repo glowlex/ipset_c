@@ -77,6 +77,13 @@ class IPSet:
         True
         """
 
+    def isIntersects(self, other: "IPSet", /) -> bool:
+        """
+        Returns True if the IPSet intersects with the given IPSet.
+        >>> IPSet(["5.5.5.4/30"]).isIntersects(IPSet(["5.5.5.7/32"]))
+        True
+        """
+
     def getCidrs(self) -> List[str]:
         """
         Returns a list of CIDRs that the IPSet contains.

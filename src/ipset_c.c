@@ -150,6 +150,24 @@ IPSet_isIntersectsCidr(IPSet* self, PyObject* cidr) {
 
 
 static PyObject*
+IPSet_isIntersects(IPSet* self, IPSet* other) {
+    IPSET_TYPE_CHECK(other);
+    if (self->netsContainer->len < other->netsContainer->len) {
+        IPSet* tmp = self;
+        self = other;
+        other = tmp;
+    }
+    for (Py_ssize_t i = 0; i < other->netsContainer->len; i++) {
+        Py_ssize_t res = NetRangeContainer_findNetRangeIntersectsIndex(self->netsContainer, other->netsContainer->array[i]);
+        if (res >= 0) {
+            Py_RETURN_TRUE;
+        }
+    }
+    Py_RETURN_FALSE;
+}
+
+
+static PyObject*
 IPSet_size(IPSet* self) {
     NetRangeObject** array = self->netsContainer->array;
     if (self->netsContainer->len == 1 && array[0]->len == 0 && array[0]->isIPv6) {
@@ -496,6 +514,7 @@ static PyMethodDef IPSet_tp_methods[] = {
     { "isIntersectsCidr", (PyCFunction)IPSet_isIntersectsCidr, METH_O, NULL },
     { "isSuperset", (PyCFunction)IPSet_isSuperset, METH_O, NULL },
     { "isSubset", (PyCFunction)IPSet_isSubset, METH_O, NULL },
+    { "isIntersects", (PyCFunction)IPSet_isIntersects, METH_O, NULL },
     { "addCidr", (PyCFunction)IPSet_addCidr, METH_O, NULL },
     { "removeCidr", (PyCFunction)IPSet_removeCidr, METH_O, NULL },
     { "copy", (PyCFunction)IPSet_copy, METH_NOARGS, NULL },

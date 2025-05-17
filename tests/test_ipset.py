@@ -1,7 +1,6 @@
 import ipaddress
 import pickle
 import sys
-from typing import List
 
 import pytest
 
@@ -201,6 +200,11 @@ def testIPSetCopyAddRemove(data, cidrs, expected):
     (["12.22.0.0/16"], ["12.22.128.0/24"], ["12.22.0.0/16"]),
     (["8.8.0.0/17"], ["8.8.128.0/17"], ["8.8.0.0/16"]),
     (["8.8.0.0/32", "10.8.0.0/32"], ["9.8.128.0/32"], ["8.8.0.0/32", "9.8.128.0/32", "10.8.0.0/32"]),
+    (
+        [str(ipaddress.IPv4Address(x)) + "/30" for x in range(0, 65536, 8)],
+        [str(ipaddress.IPv4Address(x)) + "/30" for x in range(4, 65536, 8)],
+        ["0.0.0.0/16"],
+    ),
     (["::/0"], ["::/0"], ["::/0"]),
     (["4444::/16"], ["1111::/16"], ["1111::/16", "4444::/16"])
 ])
@@ -232,7 +236,7 @@ def testIPSetUnion(data, add, expected):
     (["8.8.0.0/17"], ["8.8.128.0/17"], ["8.8.0.0/16"]),
     (["8.8.0.0/32", "10.8.0.0/32"], ["9.8.128.0/32"], ["8.8.0.0/32", "9.8.128.0/32", "10.8.0.0/32"]),
     (["::/0"], ["::/0"], []),
-    (["4444::/16"], ["1111::/16"], ["1111::/16", "4444::/16"])
+    (["4444::/16"], ["1111::/16"], ["1111::/16", "4444::/16"]),
 ])
 def testIPSetXor(data, add, expected):
     import ipset_c
@@ -256,6 +260,7 @@ def testIPSetXor(data, add, expected):
         ["8.8.0.1/32", "10.8.0.1/32", "30.128.0.0/9"]
     ),
     (["8dcf:dcd5::/31"], ["8dcf:dcd5::/32"], ["8dcf:dcd4::/32"]),
+    (["::/0"], ["::/0"], []),
 ])
 def testIPSetSubstruct(data, sub, expected):
     import ipset_c
@@ -280,9 +285,21 @@ def testIPSetSubstruct(data, sub, expected):
     (["6.6.6.0/24"], ["6.6.6.0/24"], ["6.6.6.0/24"]),
     (["6.6.6.0/24"], ["6.6.6.0/28"], ["6.6.6.0/28"]),
     (["6.6.6.0/28"], ["6.6.6.0/24"], ["6.6.6.0/28"]),
-    (["17.1.0.0/16", "17.2.0.0/16"], ["0.0.0.0/32", "0.0.0.2/32", "17.0.0.0/8"], ["17.1.0.0/16", "17.2.0.0/16"]),
-    (["6.6.6.0/32", "6.6.6.6/32", "6.6.6.255/32"], ["6.6.6.0/24"], ["6.6.6.0/32", "6.6.6.6/32", "6.6.6.255/32"]),
-    (["6.6.6.0/24"], ["6.6.6.0/32", "6.6.6.6/32", "6.6.6.255/32"], ["6.6.6.0/32", "6.6.6.6/32", "6.6.6.255/32"]),
+    (
+        ["17.1.0.0/16", "17.2.0.0/16"],
+        ["0.0.0.0/32", "0.0.0.2/32", "17.0.0.0/8"],
+        ["17.1.0.0/16", "17.2.0.0/16"],
+    ),
+    (
+        ["6.6.6.0/32", "6.6.6.6/32", "6.6.6.255/32"],
+        ["6.6.6.0/24"],
+        ["6.6.6.0/32", "6.6.6.6/32", "6.6.6.255/32"],
+    ),
+    (
+        ["6.6.6.0/24"],
+        ["6.6.6.0/32", "6.6.6.6/32", "6.6.6.255/32"],
+        ["6.6.6.0/32", "6.6.6.6/32", "6.6.6.255/32"],
+    ),
     (
         ["6.6.6.0/32", "6.6.6.6/32", "6.6.6.255/32"],
         ["6.6.6.0/24", "7.6.6.0/24", "8.6.6.0/24", "9.6.6.0/24"],
@@ -297,6 +314,16 @@ def testIPSetSubstruct(data, sub, expected):
         ["0.0.0.0/24", "5.0.0.0/32", "5.0.0.64/32", "5.0.0.128/32"],
         ["0.0.0.0/32", "0.0.0.64/32", "0.0.0.128/32", "5.0.0.0/24"],
         ["0.0.0.0/32", "0.0.0.64/32", "0.0.0.128/32", "5.0.0.0/32", "5.0.0.64/32", "5.0.0.128/32"],
+    ),
+    (
+        ["0.0.0.0/0"],
+        ["0.0.0.0/0"],
+        ["0.0.0.0/0"],
+    ),
+    (
+        [str(ipaddress.IPv4Address(x)) + "/30" for x in range(0, 65536, 8)],
+        [str(ipaddress.IPv4Address(x)) + "/30" for x in range(4, 65536, 8)],
+        [],
     ),
     (["8dcf:dcd4::/31"], ["8dcf:dcd5::/32"], ["8dcf:dcd5::/32"]),
     (
@@ -313,6 +340,7 @@ def testIPSetIntersection(data, intersect, expected):
     assert ipset.getCidrs() == data
     assert ipsetIntersect.getCidrs() == intersect
     assert ipsetFinal.getCidrs() == expected
+    assert ipsetFinal.isIntersects(ipsetIntersect) == bool(expected)
 
 
 @pytest.mark.parametrize("data,equal,expected", [
@@ -392,6 +420,8 @@ def testIPSetTypeError(data, sec):
     with pytest.raises(TypeError):
         ipset_c.IPSet(data).isSuperset(sec)
     with pytest.raises(TypeError):
+        ipset_c.IPSet(data).isIntersects(sec)
+    with pytest.raises(TypeError):
         v = ipset_c.IPSet(data) >= sec
     with pytest.raises(TypeError):
         v = ipset_c.IPSet(data) > sec
@@ -401,6 +431,8 @@ def testIPSetTypeError(data, sec):
         v = ipset_c.IPSet(data) < sec
     with pytest.raises(TypeError):
         ipset_c.IPSet(data).isSubset(sec)
+    with pytest.raises(TypeError):
+        ipset_c.IPSet(data).isIntersects(sec)
     with pytest.raises(TypeError):
         v = ipset == sec
 
