@@ -283,16 +283,22 @@ createIPSet() {
 
 
 static IPSet*
+createNullIPSet() {
+    IPSet* res = IPSet_new(&IPSetType, NULL, NULL);
+    return res;
+}
+
+
+static IPSet*
 IPSet_copy(IPSet* self) {
-    IPSet* res = createIPSet();
+    IPSet* res = createNullIPSet();
     if (res == NULL) {
         goto exit;
     }
-    NetRangeContainer_destroy(res->netsContainer);
     res->netsContainer = NetRangeContainer_copy(self->netsContainer);
     if (res->netsContainer == NULL) {
         Py_XDECREF(res);
-        goto exit;
+        return NULL;
     }
 exit:
     return res;
@@ -302,17 +308,14 @@ exit:
 static IPSet*
 IPSet__or__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
-    if (self->netsContainer->len < other->netsContainer->len) {
-        IPSet* tmp = self;
-        self = other;
-        self = tmp;
-    }
-    IPSet* res = IPSet_copy(self);
+    IPSet* res = createNullIPSet();
     if (res == NULL) {
         return res;
     }
-    for (Py_ssize_t i = 0; i < other->netsContainer->len; i++) {
-        NetRangeContainer_addNetRange(res->netsContainer, NetRangeObject_copy(other->netsContainer->array[i]));
+    res->netsContainer = NetRangeContainer_union(self->netsContainer, other->netsContainer);
+    if (res->netsContainer == NULL) {
+        Py_XDECREF(res);
+        return NULL;
     }
     return res;
 }
@@ -332,7 +335,7 @@ IPSet__xor__(IPSet* self, IPSet* other) {
     for (Py_ssize_t i = 0; i < other->netsContainer->len; i++) {
         NetRangeContainer_removeNetRange(scont, other->netsContainer->array[i]);
     }
-    for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
+        for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
         NetRangeContainer_removeNetRange(ocont, self->netsContainer->array[i]);
     }
     if (scont->len < ocont->len) {
@@ -345,11 +348,10 @@ IPSet__xor__(IPSet* self, IPSet* other) {
     }
     ocont->len = 0;
     NetRangeContainer_destroy(ocont);
-    IPSet* res = createIPSet();
+    IPSet* res = createNullIPSet();
     if (res == NULL) {
         return res;
     }
-    NetRangeContainer_destroy(res->netsContainer);
     res->netsContainer = scont;
     return res;
 }
@@ -374,11 +376,10 @@ static IPSet*
 IPSet__and__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     NetRangeContainer* cont = NetRangeContainer_intersection(self->netsContainer, other->netsContainer);
-    IPSet* res = createIPSet();
+    IPSet* res = createNullIPSet();
     if (res == NULL) {
         return NULL;
     }
-    NetRangeContainer_destroy(res->netsContainer);
     res->netsContainer = cont;
     return res;
 }

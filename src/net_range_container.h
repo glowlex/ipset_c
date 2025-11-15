@@ -34,3 +34,5 @@ int NetRangeContainer_removeNetRange(NetRangeContainer* const self, const NetRan
 NetRangeContainer* NetRangeContainer_copy(NetRangeContainer* self);
 
 NetRangeContainer* NetRangeContainer_intersection(const NetRangeContainer* self, const NetRangeContainer* other);
+
+NetRangeContainer* NetRangeContainer_union(const NetRangeContainer* self, const NetRangeContainer* other);
