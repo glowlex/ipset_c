@@ -403,6 +403,9 @@ IPSet__eq__(IPSet* self, IPSet* other) {
 static PyObject*
 IPSet__neq__(IPSet* self, IPSet* other) {
     PyObject* res = IPSet__eq__(self, other);
+    if (res == NULL) {
+        return res;
+    }
     if (Py_IsTrue(res)) {
         Py_DECREF(res);
         Py_RETURN_FALSE;

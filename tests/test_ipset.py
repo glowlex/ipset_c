@@ -435,6 +435,8 @@ def testIPSetTypeError(data, sec):
         ipset_c.IPSet(data).isIntersects(sec)
     with pytest.raises(TypeError):
         v = ipset == sec
+    with pytest.raises(TypeError):
+        v = ipset != sec
 
 
 @pytest.mark.parametrize("data", [
