@@ -9,7 +9,7 @@
 
 ### Fixed
 * error if `__neq__` is called with non IPSet object
-
+* inheritance. the object returned by the mutable operations was the original Ctype
 
 ## v0.1.1 - 2025-05-08
 

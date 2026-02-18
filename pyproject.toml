@@ -48,6 +48,7 @@ generate-setup-file = true
 [tool.poetry.dependencies]
 python = ">=3.8,<4"
 setuptools = "*"
+typing_extensions = { version = "*", markers = "python_version < '3.11'" }
 
 
 [tool.poetry.group.test.dependencies]
@@ -103,6 +104,9 @@ disable = [
 
 
 [tool.black]
+line-length = 120
+
+[tool.ruff]
 line-length = 120
 
 [tool.poe.tasks]

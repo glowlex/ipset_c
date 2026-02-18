@@ -283,15 +283,18 @@ createIPSet() {
 
 
 static IPSet*
-createNullIPSet() {
-    IPSet* res = IPSet_new(&IPSetType, NULL, NULL);
-    return res;
+copyAsNullIPSet(IPSet* self) {
+    PyTypeObject* type = Py_TYPE(self);
+    if (type->tp_new != NULL) {
+        return type->tp_new(type, NULL, NULL);
+    }
+    return NULL;
 }
 
 
 static IPSet*
 IPSet_copy(IPSet* self) {
-    IPSet* res = createNullIPSet();
+    IPSet* res = copyAsNullIPSet(self);
     if (res == NULL) {
         goto exit;
     }
@@ -308,7 +311,7 @@ exit:
 static IPSet*
 IPSet__or__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
-    IPSet* res = createNullIPSet();
+    IPSet* res = copyAsNullIPSet(self);
     if (res == NULL) {
         return res;
     }
@@ -348,7 +351,7 @@ IPSet__xor__(IPSet* self, IPSet* other) {
     }
     ocont->len = 0;
     NetRangeContainer_destroy(ocont);
-    IPSet* res = createNullIPSet();
+    IPSet* res = copyAsNullIPSet(self);
     if (res == NULL) {
         return res;
     }
@@ -376,7 +379,7 @@ static IPSet*
 IPSet__and__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     NetRangeContainer* cont = NetRangeContainer_intersection(self->netsContainer, other->netsContainer);
-    IPSet* res = createNullIPSet();
+    IPSet* res = copyAsNullIPSet(self);
     if (res == NULL) {
         return NULL;
     }
