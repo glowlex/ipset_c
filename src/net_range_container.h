@@ -35,4 +35,8 @@ NetRangeContainer* NetRangeContainer_copy(NetRangeContainer* self);
 
 NetRangeContainer* NetRangeContainer_intersection(const NetRangeContainer* self, const NetRangeContainer* other);
 
+Py_ssize_t NetRangeContainer_ensureSpareSize(NetRangeContainer* const self, Py_ssize_t nelems);
+
 NetRangeContainer* NetRangeContainer_union(const NetRangeContainer* self, const NetRangeContainer* other);
+
+NetRangeContainer* NetRangeContainer_subtract(const NetRangeContainer* self, const NetRangeContainer* other);

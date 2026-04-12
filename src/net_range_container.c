@@ -1,12 +1,12 @@
 #include "net_range_container.h"
 
 
-static Py_ssize_t
-ensureSpareSize(NetRangeContainer* const self, Py_ssize_t nelems) {
-    if (self->len + nelems < self->allocatedLen) {
+Py_ssize_t
+NetRangeContainer_ensureSpareSize(NetRangeContainer* const self, Py_ssize_t nelems) {
+    if (self->len + nelems <= self->allocatedLen) {
         return 0;
     }
-    const Py_ssize_t newAllocSize = self->len + nelems*4;
+    const Py_ssize_t newAllocSize = self->len + max(nelems, self->len);
     NetRangeObject** newCont = PyMem_Realloc(self->array, newAllocSize * sizeof(NetRangeObject*));
     if (newCont == NULL) {
         PyErr_NoMemory();
@@ -19,8 +19,8 @@ ensureSpareSize(NetRangeContainer* const self, Py_ssize_t nelems) {
 
 
 inline static Py_ssize_t
-mergeNetRangesArray(NetRangeObject** array, const Py_ssize_t size) {
-    Py_ssize_t base = 0, next = 0, changeCounter = 0;
+mergeNetRangesArray(NetRangeObject** array, const Py_ssize_t size, Py_ssize_t startCheckPosition) {
+    Py_ssize_t base = max(startCheckPosition - 1, 0), next = 0, changeCounter = 0;
     uint128c mask;
 
     NetRangeObject* baseNode, * nextNode;
@@ -87,9 +87,9 @@ static void
 removeGapsFromNetRanges(NetRangeContainer *const self, Py_ssize_t start) {
     Py_ssize_t base = start, next = start;
     NetRangeObject** array = self->array;
-        while (base < self->len && array[base] != NULL) {
-            base++;
-        }
+    while (base < self->len && array[base] != NULL) {
+        base++;
+    }
 
     next = base + 1;
     while (next < self->len) {
@@ -111,26 +111,10 @@ comparatorWithLen(const NetRangeObject **const elem1, const NetRangeObject **con
     if (GT128((*elem2)->first, (*elem1)->first)) {
         return -1;
     } 
-    if ((*elem1)->len > (*elem2)->len) {
-        return 1;
-    } 
-    if ((*elem1)->len < (*elem2)->len) {
-        return -1;
-    } 
-    return 0;
+    return (*elem1)->len - (*elem2)->len;
 }
 
 
-static int
-comparator(const NetRangeObject **const elem1, const NetRangeObject **const elem2) {
-    if (GT128((*elem1)->first, (*elem2)->first)) {
-        return 1;
-    } 
-    if (GT128((*elem2)->first, (*elem1)->first)) {
-        return -1;
-    } 
-    return 0;
-}
 
 
 static void
@@ -147,9 +131,9 @@ mergeNetRanges(NetRangeContainer *const  self) {
     if (self->len < 2) {
         return;
     }
-    qsort(self->array, self->len, sizeof(self->array[0]), (int (*)(void const*, void const*))comparator);
+    qsort(self->array, self->len, sizeof(self->array[0]), (int (*)(void const*, void const*))comparatorWithLen);
     mergeSortedNetRanges(self);
-    }
+}
 
 
 
@@ -308,7 +292,7 @@ NetRangeContainer_addNetRange (NetRangeContainer *const self, NetRangeObject* it
     Py_ssize_t posShift = 0;
     Py_ssize_t i = findInsertIndex(self, item, &posShift);
     if (posShift != 0 || item->len < self->array[i]->len) {
-        if (ensureSpareSize(self, 1) == -1) {
+        if (NetRangeContainer_ensureSpareSize(self, 1) == -1) {
             return -1;
         }
         if (posShift == 1) {
@@ -318,7 +302,8 @@ NetRangeContainer_addNetRange (NetRangeContainer *const self, NetRangeObject* it
         self->array[i] = item;
         self->len++;
         Py_ssize_t startIdx = max(i - item->len, 0);
-        Py_ssize_t changesNum = mergeNetRangesArray(&self->array[startIdx], self->len - startIdx);
+        Py_ssize_t size = min(self->len - startIdx, item->isIPv6 ? 129:33);
+        Py_ssize_t changesNum = mergeNetRangesArray(&self->array[startIdx], size, startIdx ? item->len:i);
         if (changesNum) {
             removeGapsFromNetRanges(self, startIdx);
         }
@@ -381,12 +366,13 @@ NetRangeContainer_removeNetRange(NetRangeContainer* const self, const NetRangeOb
             growNum -= self->array[i]->len;
             growNum--;
             if (growNum >= 0) {
-                if (ensureSpareSize(self, growNum) == -1) {
+                if (NetRangeContainer_ensureSpareSize(self, growNum) == -1) {
                     return -1;
                 }
                 memmove(self->array + i + growNum + 1, self->array + i + 1, (self->len - i - 1) * sizeof(NetRangeObject*));
                 spliceNetRangeObject(&self->array[i], item);
                 self->len += growNum;
+                break;
             }
             else {
                 NetRangeObject_destroy(self->array[i]);
@@ -402,7 +388,78 @@ NetRangeContainer_removeNetRange(NetRangeContainer* const self, const NetRangeOb
 }
 
 
-NetRangeContainer* 
+NetRangeContainer*
+NetRangeContainer_subtract(const NetRangeContainer* self, const NetRangeContainer* other) {
+    NetRangeContainer* res = NULL;
+    if (other->len == 0) {
+        res = NetRangeContainer_copy(self);
+        if (res == NULL) {
+            goto error;
+        }
+        return res;
+    }
+    res = NetRangeContainer_create(self->len);
+    if (res == NULL) {
+        goto error;
+    }
+    Py_ssize_t baseI = 0, subI = 0, processedBaseI = -1;
+    while (self->len > baseI && other->len > subI ) {
+        Py_ssize_t posShift = 0;
+        Py_ssize_t i = findInsertIndexLoop(self->array + baseI, self->len - baseI, other->array[subI], &posShift);
+        if (posShift == 0) {
+            Py_ssize_t growNum = 0;
+            if (baseI + i == processedBaseI) {
+                NetRangeContainer_removeNetRange(res, other->array[subI]);
+                subI++;
+                continue;
+            }
+            growNum = other->array[subI]->len;
+            growNum -= self->array[baseI + i]->len;
+            if (i > 0) {
+                if (NetRangeContainer_ensureSpareSize(res, baseI + i - processedBaseI) == -1) { // if processedBaseI = -1 gives spare +1 size. fix?
+                    goto error;
+                }
+                for (Py_ssize_t j = processedBaseI + 1; j < baseI + i; j++) {
+                    res->array[res->len] = NetRangeObject_copy(self->array[j]);
+                    res->len++;
+                }
+            }
+            baseI += i;
+            if (growNum > 0) {
+                if (NetRangeContainer_ensureSpareSize(res, growNum) == -1) {
+                    goto error;
+                }
+                res->array[res->len] = NetRangeObject_copy(self->array[baseI]);
+                spliceNetRangeObject(&res->array[res->len], other->array[subI]);
+                res->len += growNum;
+                subI++;
+                processedBaseI = baseI;
+            } else {
+                processedBaseI = baseI;
+                baseI++;
+            }
+        } else {
+            subI++;
+        }
+    }
+
+    if (self->len > processedBaseI) {
+        if (NetRangeContainer_ensureSpareSize(res, self->len - processedBaseI) == -1) {
+            goto error;
+        }
+        for (Py_ssize_t i = processedBaseI + 1; i < self->len; i++) {
+            res->array[res->len] = NetRangeObject_copy(self->array[i]);
+            res->len++;
+        }
+    }
+    return res;
+error:
+    NetRangeContainer_destroy(res);
+    return NULL;
+}
+
+
+NetRangeContainer*
 NetRangeContainer_intersection(const NetRangeContainer* self, const NetRangeContainer* other) {
     NetRangeContainer* res = NetRangeContainer_create(self->len + other->len);
     if (res == NULL) {
@@ -451,19 +508,19 @@ NetRangeContainer_union(const NetRangeContainer* self, const NetRangeContainer* 
     Py_ssize_t j = 0;
     Py_ssize_t resI = 0;
     while(i < self->len && j < other->len) {
-        while (i < self->len && GTE128(other->array[j]->first, self->array[i]->first)) {
-            res->array[resI] = NetRangeObject_copy(self->array[i]);
-            resI++;
-            i++;
-        }
-        if (i >= self->len) {
-            break;
-        }
-        while (j < other->len && GT128(self->array[i]->first, other->array[j]->first)) {
+        int r = comparatorWithLen(&self->array[i], &other->array[j]);
+        if (r > 0) {
             res->array[resI] = NetRangeObject_copy(other->array[j]);
-            resI++;
+            j++;
+        } else if (r < 0) {
+            res->array[resI] = NetRangeObject_copy(self->array[i]);
+            i++;
+        } else {
+            res->array[resI] = NetRangeObject_copy(self->array[i]);
+            i++;
             j++;
         }
+        resI++;
     }
     NetRangeContainer* tail = self;
     Py_ssize_t tailI = i;

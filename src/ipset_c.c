@@ -327,35 +327,36 @@ IPSet__or__(IPSet* self, IPSet* other) {
 static IPSet*
 IPSet__xor__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
-    NetRangeContainer *scont = NetRangeContainer_copy(self->netsContainer);
-    if (scont == NULL) {
-        return NULL;
+    NetRangeContainer* united = NULL, *intersect = NULL, *subtract = NULL;
+    IPSet* res = NULL;
+    united = NetRangeContainer_union(self->netsContainer, other->netsContainer);
+    if (united == NULL) {
+        goto error;
     }
-    NetRangeContainer *ocont = NetRangeContainer_copy(other->netsContainer);
-    if (ocont == NULL) {
-        return NULL;
+    intersect = NetRangeContainer_intersection(self->netsContainer, other->netsContainer);
+    if (intersect == NULL) {
+        goto error;
     }
-    for (Py_ssize_t i = 0; i < other->netsContainer->len; i++) {
-        NetRangeContainer_removeNetRange(scont, other->netsContainer->array[i]);
+
+    subtract = NetRangeContainer_subtract(united, intersect);
+    if (subtract == NULL) {
+        goto error;
     }
-        for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
-        NetRangeContainer_removeNetRange(ocont, self->netsContainer->array[i]);
-    }
-    if (scont->len < ocont->len) {
-        NetRangeContainer* tmp = scont;
-        scont = ocont;
-        scont = tmp;
-    }
-    for (Py_ssize_t i = 0; i < ocont->len; i++) {
-        NetRangeContainer_addNetRange(scont, ocont->array[i]);
-    }
-    ocont->len = 0;
-    NetRangeContainer_destroy(ocont);
-    IPSet* res = copyAsNullIPSet(self);
+
+    res = copyAsNullIPSet(self);
     if (res == NULL) {
-        return res;
+        goto error;
     }
-    res->netsContainer = scont;
+
+    res->netsContainer = subtract;
+    NetRangeContainer_destroy(united);
+    NetRangeContainer_destroy(intersect);
+    return res;
+
+error:
+    NetRangeContainer_destroy(united);
+    NetRangeContainer_destroy(intersect);
+    NetRangeContainer_destroy(subtract);
     return res;
 }
 
@@ -363,14 +364,15 @@ IPSet__xor__(IPSet* self, IPSet* other) {
 static IPSet*
 IPSet__subtract__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
-    IPSet* res = IPSet_copy(self);
+    IPSet* res = copyAsNullIPSet(self);
     if (res == NULL) {
-        goto exit;
+        return res;
     }
-    for (Py_ssize_t i = 0; i < other->netsContainer->len; i++) {
-        NetRangeContainer_removeNetRange(res->netsContainer, other->netsContainer->array[i]);
+    res->netsContainer = NetRangeContainer_subtract(self->netsContainer, other->netsContainer);
+    if (res->netsContainer == NULL) {
+        Py_XDECREF(res);
+        return NULL;
     }
-exit:
     return res;
 }
 
@@ -379,6 +381,9 @@ static IPSet*
 IPSet__and__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     NetRangeContainer* cont = NetRangeContainer_intersection(self->netsContainer, other->netsContainer);
+    if (cont == NULL) {
+        return NULL;
+    }
     IPSet* res = copyAsNullIPSet(self);
     if (res == NULL) {
         return NULL;

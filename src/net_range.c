@@ -70,9 +70,9 @@ NetRangeObject_parseCidr(NetRangeObject* const self, const char* const cidr) {
             .lo = *(PY_UINT64_T*)(buf + 8),
         };
     } else {
-    if (inet_pton(AF_INET, tmpcidr, buf) != 1) {
-        return -1;
-    }
+        if (inet_pton(AF_INET, tmpcidr, buf) != 1) {
+            return -1;
+        }
         self->first = (uint128c){
             .hi=0,
             .lo=(PY_UINT32_T)(
