@@ -3,29 +3,29 @@
 #include "net_range.h"
 
 #if !(defined(_WIN32) || defined(__CYGWIN__))
-    #include <sys/param.h>
-    #define max MAX
-    #define min MIN
+#include <sys/param.h>
+#define max MAX
+#define min MIN
 #endif
 
 
 typedef struct {
-    NetRangeObject **array;
+    NetRangeObject** array;
     Py_ssize_t allocatedLen;
     Py_ssize_t len;
 } NetRangeContainer;
 
 NetRangeContainer* NetRangeContainer_create(Py_ssize_t nelem);
 
-void NetRangeContainer_destroy(NetRangeContainer *const self);
+void NetRangeContainer_destroy(NetRangeContainer* const self);
 
-void NetRangeContainer_merge(NetRangeContainer *const self);
+void NetRangeContainer_merge(NetRangeContainer* const self);
 
-Py_ssize_t NetRangeContainer_findNetRangeContainsIndex(const NetRangeContainer *const self, const NetRangeObject *const item);
+Py_ssize_t NetRangeContainer_findNetRangeContainsIndex(const NetRangeContainer* const self, const NetRangeObject* const item);
 
-Py_ssize_t NetRangeContainer_findNetRangeIntersectsIndex(const NetRangeContainer *const self, const NetRangeObject *const item);
+Py_ssize_t NetRangeContainer_findNetRangeIntersectsIndex(const NetRangeContainer* const self, const NetRangeObject* const item);
 
-int NetRangeContainer_isSuperset(const NetRangeContainer *const self, const NetRangeContainer *const other);
+int NetRangeContainer_isSuperset(const NetRangeContainer* const self, const NetRangeContainer* const other);
 
 int NetRangeContainer_addNetRange(NetRangeContainer* const self, NetRangeObject* item);
 

@@ -15,16 +15,14 @@ do { \
 
 
 static void
-IPSet_dealloc(IPSet *self)
-{
+IPSet_dealloc(IPSet* self) {
     NetRangeContainer_destroy(self->netsContainer);
-    Py_TYPE(self)->tp_free((PyObject *) self);
+    Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 
 static PyObject*
-IPSet_new(PyTypeObject* type, PyObject* args, PyObject* kw)
-{
+IPSet_new(PyTypeObject* type, PyObject* args, PyObject* kw) {
     IPSet* self = (IPSet*)type->tp_alloc(type, 0);
     if (self != NULL) {
         self->netsContainer = NULL;
@@ -34,21 +32,20 @@ IPSet_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 
 
 static int
-IPSet_init(IPSet *self, PyObject *args)
-{
-    PyObject *nets = NULL;
+IPSet_init(IPSet* self, PyObject* args) {
+    PyObject* nets = NULL;
     if (!PyArg_ParseTuple(args, "O", &nets)) {
         return -1;
     }
 
     static char errMes[] = "cidrs must be a list or tuple";
-    PyObject *it = PySequence_Fast(nets, errMes);
+    PyObject* it = PySequence_Fast(nets, errMes);
     // string also valid
-    if (it == NULL){
+    if (it == NULL) {
         return -1;
     }
 
-    PyObject *prefix = NULL;
+    PyObject* prefix = NULL;
     const Py_ssize_t len = PySequence_Fast_GET_SIZE(it);
     self->netsContainer = NetRangeContainer_create(len);
     if (self->netsContainer == NULL) {
@@ -101,7 +98,7 @@ error:
 
 
 static PyObject*
-IPSet_getCidrs(IPSet *self) {
+IPSet_getCidrs(IPSet* self) {
     PyObject* resList = PyList_New(self->netsContainer->len);
     char const prefix[IPV6_MAX_STRING_LEN] = "";
     const NetRangeObject** const netsArray = self->netsContainer->array;
@@ -114,7 +111,7 @@ IPSet_getCidrs(IPSet *self) {
 
 
 static PyObject*
-IPSet_isContainsCidr(IPSet *self, PyObject* cidr) {
+IPSet_isContainsCidr(IPSet* self, PyObject* cidr) {
     NetRangeObject* netRange = getNetRangeFromPy(cidr);
     if (netRange == NULL) {
         return NULL;
@@ -126,7 +123,7 @@ IPSet_isContainsCidr(IPSet *self, PyObject* cidr) {
 
 
 static int
-IPSet__contains__(IPSet *self, PyObject* cidr) {
+IPSet__contains__(IPSet* self, PyObject* cidr) {
     NetRangeObject* netRange = getNetRangeFromPy(cidr);
     if (netRange == NULL) {
         return -1;
@@ -178,10 +175,10 @@ IPSet_size(IPSet* self) {
         Py_DECREF(one);
         return resObj;
     }
-    uint128c res = {.hi=0, .lo=0};
+    uint128c res = { .hi = 0, .lo = 0 };
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
-        PY_UINT32_T lenShift = ((array[i]->isIPv6 ? 128:32) - array[i]->len);
-        uint128c localLen = {.hi=0, .lo=0};
+        PY_UINT32_T lenShift = ((array[i]->isIPv6 ? 128 : 32) - array[i]->len);
+        uint128c localLen = { .hi = 0, .lo = 0 };
         if (lenShift >= 64) {
             localLen.hi = (PY_UINT64_T)0b1 << (lenShift - 64);
         } else {
@@ -189,12 +186,12 @@ IPSet_size(IPSet* self) {
         }
         res = ADD128(res, localLen);
     }
-    return PyLong_FromUnsignedNativeBytes((const unsigned char *)&res, 16, -1);
+    return PyLong_FromUnsignedNativeBytes((const unsigned char*)&res, 16, -1);
 }
 
 
 static PyObject*
-IPSet_isSuperset(IPSet *self, IPSet *other) {
+IPSet_isSuperset(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     if (NetRangeContainer_isSuperset(self->netsContainer, other->netsContainer)) {
         Py_RETURN_TRUE;
@@ -207,8 +204,8 @@ static PyObject*
 IPSet__gt__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     if (NetRangeContainer_isSuperset(self->netsContainer, other->netsContainer)) {
-        PyObject *ssize = IPSet_size(self);
-        PyObject *osize = IPSet_size(other);
+        PyObject* ssize = IPSet_size(self);
+        PyObject* osize = IPSet_size(other);
         int res = PyObject_RichCompareBool(ssize, osize, Py_GT);
         Py_DECREF(ssize);
         Py_DECREF(osize);
@@ -235,8 +232,8 @@ static PyObject*
 IPSet__lt__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     if (NetRangeContainer_isSuperset(other->netsContainer, self->netsContainer)) {
-        PyObject *ssize = IPSet_size(self);
-        PyObject *osize = IPSet_size(other);
+        PyObject* ssize = IPSet_size(self);
+        PyObject* osize = IPSet_size(other);
         int res = PyObject_RichCompareBool(ssize, osize, Py_LT);
         Py_DECREF(ssize);
         Py_DECREF(osize);
@@ -327,7 +324,7 @@ IPSet__or__(IPSet* self, IPSet* other) {
 static IPSet*
 IPSet__xor__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
-    NetRangeContainer* united = NULL, *intersect = NULL, *subtract = NULL;
+    NetRangeContainer* united = NULL, * intersect = NULL, * subtract = NULL;
     IPSet* res = NULL;
     united = NetRangeContainer_union(self->netsContainer, other->netsContainer);
     if (united == NULL) {
@@ -400,7 +397,7 @@ IPSet__eq__(IPSet* self, IPSet* other) {
         Py_RETURN_FALSE;
     }
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
-        NetRangeObject* a = self->netsContainer->array[i], *b = other->netsContainer->array[i];
+        NetRangeObject* a = self->netsContainer->array[i], * b = other->netsContainer->array[i];
         if (!EQ128(a->first, b->first) || a->len != b->len) {
             Py_RETURN_FALSE;
         }
@@ -424,7 +421,7 @@ IPSet__neq__(IPSet* self, IPSet* other) {
 }
 
 
-static PyObject* 
+static PyObject*
 IPSet_tp_richcompare(IPSet* self, IPSet* other, int op) {
     switch (op) {
     case(Py_GE):
@@ -452,7 +449,7 @@ IPSet__bool__(IPSet* self) {
 
 
 static PyObject*
-IPSet__getstate__(IPSet* self, PyObject *Py_UNUSED(ignored)) {
+IPSet__getstate__(IPSet* self, PyObject* Py_UNUSED(ignored)) {
     PyObject* bytes = PyBytes_FromStringAndSize(NULL, sizeof(IPSetPickle) + sizeof(NetRangeObject) * self->netsContainer->len);
     if (!bytes) {
         return PyErr_NoMemory();
@@ -472,11 +469,11 @@ IPSet__getstate__(IPSet* self, PyObject *Py_UNUSED(ignored)) {
 
 
 static PyObject*
-IPSet__setstate__(IPSet* self, PyObject *state) {
+IPSet__setstate__(IPSet* self, PyObject* state) {
     if (!PyBytes_CheckExact(state)) {
         return PyErr_Format(PyExc_TypeError, "state must be a bytes");
     }
-    IPSetPickle *buffer = NULL;
+    IPSetPickle* buffer = NULL;
     Py_ssize_t size = 0;
     if (PyBytes_AsStringAndSize(state, (char**)&buffer, &size) < 0) {
         return NULL;
@@ -532,13 +529,13 @@ static PyMethodDef IPSet_tp_methods[] = {
     { "copy", (PyCFunction)IPSet_copy, METH_NOARGS, NULL },
     { "__getstate__", (PyCFunction)IPSet__getstate__, METH_NOARGS, NULL },
     { "__setstate__", (PyCFunction)IPSet__setstate__, METH_O, NULL },
-    {NULL}
+    { NULL }
 };
 
 
 static PyGetSetDef IPSet_tp_descr_getset[] = {
-    { "size", (getter)IPSet_size, NULL, NULL},
-    {NULL}
+    { "size", (getter)IPSet_size, NULL, NULL },
+    { NULL }
 };
 
 
@@ -570,10 +567,9 @@ static PyModuleDef IPSet_module = {
 
 
 PyMODINIT_FUNC
-PyInit_ipset_c_ext(void)
-{
-    PyObject *m = NULL;
-    if (PyType_Ready(&IPSetType) < 0){
+PyInit_ipset_c_ext(void) {
+    PyObject* m = NULL;
+    if (PyType_Ready(&IPSetType) < 0) {
         return NULL;
     }
     if ((m = PyModule_Create(&IPSet_module)) == NULL) {
@@ -585,8 +581,8 @@ PyInit_ipset_c_ext(void)
         Py_DECREF(m);
         return NULL;
     }
-    #ifdef Py_GIL_DISABLED
-        PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
-    #endif
+#ifdef Py_GIL_DISABLED
+    PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
+#endif
     return m;
 }

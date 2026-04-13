@@ -14,7 +14,7 @@ NetRangeObject_create(void) {
 
 NetRangeObject*
 NetRangeObject_copy(const NetRangeObject* const self) {
-    NetRangeObject *newItem = NetRangeObject_create();
+    NetRangeObject* newItem = NetRangeObject_create();
     if (newItem == NULL) {
         return NULL;
     }
@@ -29,7 +29,7 @@ NetRangeObject_parseCidr(NetRangeObject* const self, const char* const cidr) {
     strncpy(tmpcidr, cidr, IPV6_MAX_STRING_LEN);
     tmpcidr[IPV6_MAX_STRING_LEN - 1] = '\0';
     PY_UINT32_T len = 32;
-    if (strchr(tmpcidr, ':')){
+    if (strchr(tmpcidr, ':')) {
         self->isIPv6 = 1;
         len = 128;
     } else {
@@ -45,7 +45,7 @@ NetRangeObject_parseCidr(NetRangeObject* const self, const char* const cidr) {
         if (sscanf(sep, "%d", &len) == 0) {  // strtoul on linux moves end_ptr on error
             return -1;
         }
-        if (self->isIPv6){
+        if (self->isIPv6) {
             if (len > 128) {
                 return -1;
             }
@@ -57,14 +57,14 @@ NetRangeObject_parseCidr(NetRangeObject* const self, const char* const cidr) {
     }
     Py_UCS1 buf[16] = { 0 };
 
-    if (self->isIPv6){
+    if (self->isIPv6) {
         if (inet_pton(AF_INET6, tmpcidr, buf) != 1) {
             return -1;
-        } 
-        #if PY_LITTLE_ENDIAN
-            *(PY_UINT64_T*)buf = bswap_64(*(PY_UINT64_T*)buf);
-            *(PY_UINT64_T*)(buf + 8) = bswap_64(*(PY_UINT64_T*)(buf + 8));
-        #endif
+        }
+#if PY_LITTLE_ENDIAN
+        * (PY_UINT64_T*)buf = bswap_64(*(PY_UINT64_T*)buf);
+        *(PY_UINT64_T*)(buf + 8) = bswap_64(*(PY_UINT64_T*)(buf + 8));
+#endif
         self->first = (uint128c){
             .hi = *(PY_UINT64_T*)buf,
             .lo = *(PY_UINT64_T*)(buf + 8),
@@ -74,8 +74,8 @@ NetRangeObject_parseCidr(NetRangeObject* const self, const char* const cidr) {
             return -1;
         }
         self->first = (uint128c){
-            .hi=0,
-            .lo=(PY_UINT32_T)(
+            .hi = 0,
+            .lo = (PY_UINT32_T)(
                 buf[0] << 24 |
                 buf[1] << 16 |
                 buf[2] << 8 |
@@ -84,7 +84,7 @@ NetRangeObject_parseCidr(NetRangeObject* const self, const char* const cidr) {
         };
     }
     self->len = len;
-    uint128c mask = MASK_MAP[len + (self->isIPv6 ? 0:96)];
+    uint128c mask = MASK_MAP[len + (self->isIPv6 ? 0 : 96)];
     self->first = BAND128(self->first, mask);
     self->last.hi = self->first.hi | ~mask.hi;
     self->last.lo = self->first.lo | ~mask.lo;
@@ -103,10 +103,10 @@ NetRangeObject_asUtf8CharCidr(const NetRangeObject* const self, char* const str,
     Py_UCS1 buf[16];
     *(uint128c*)buf = self->first;
     if (self->isIPv6) {
-        #if PY_LITTLE_ENDIAN
-            *(PY_UINT64_T*)buf = bswap_64(self->first.hi);
-            *(PY_UINT64_T*)(buf + 8) = bswap_64(self->first.lo);
-        #endif
+#if PY_LITTLE_ENDIAN
+        * (PY_UINT64_T*)buf = bswap_64(self->first.hi);
+        *(PY_UINT64_T*)(buf + 8) = bswap_64(self->first.lo);
+#endif
         inet_ntop(AF_INET6, buf, str, size);
         return snprintf(strchr(str, '\0'), 5, "/%u", self->len);
     }
