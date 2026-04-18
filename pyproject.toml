@@ -53,8 +53,8 @@ typing_extensions = { version = "*", markers = "python_version < '3.11'" }
 
 
 [tool.poetry.group.test.dependencies]
-pytest = "^8.0.0"
-tox = "^4.12.1"
+pytest = "*"
+tox = "*"
 poetry = "~1"
 
 
