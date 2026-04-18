@@ -55,11 +55,11 @@ typing_extensions = { version = "*", markers = "python_version < '3.11'" }
 [tool.poetry.group.test.dependencies]
 pytest = "*"
 tox = "*"
-poetry = "~1"
+poetry = "*"
 
 
 [tool.poetry.group.dev.dependencies]
-poetry = "~1"
+poetry = "*"
 poethepoet = '^0.25.0'
 
 
