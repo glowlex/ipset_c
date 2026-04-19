@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -13,7 +14,10 @@ jobs:
       fail-fast: true
       matrix:
         os: [ "ubuntu-latest", "macos-latest", "windows-latest" ]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14", "3.14t"]
+        exclude:
+          - os: ubuntu-latest
+            python-version: 3.14t
     defaults:
       run:
         shell: bash
@@ -25,10 +29,18 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install Poetry
+    - name: Install Poetry v1
       uses: snok/install-poetry@v1
+      if: matrix.python-version == '3.8' || matrix.python-version == '3.9'
       with:
         version: 1.8.5
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    - name: Install Poetry v2
+      uses: snok/install-poetry@v1
+      if: matrix.python-version != '3.8' && matrix.python-version != '3.9'
+      with:
+        version: 2.3.4
         virtualenvs-create: true
         virtualenvs-in-project: true
     - name: Load cached venv
@@ -40,14 +52,13 @@ jobs:
     - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: |
-        poetry lock --no-update
-        poetry install --no-interaction --no-root --sync --without dev
+        poetry lock ${{ case(matrix.python-version == '3.8' || matrix.python-version == '3.9', '--no-update', '') }} 
+        poetry ${{ case(matrix.python-version == '3.8' || matrix.python-version == '3.9', 'install --sync', 'sync') }} --no-interaction --no-root --without dev
     - name: Build
       run: |
         source $VENV
         poetry build -o dist
-    - name: Publish package
-      run: |
-        source $VENV
-        pip install "twine>=5.0.0,<=6"
-        twine upload dist/* --non-interactive --skip-existing -u __token__ -p ${{ secrets.PYPI_API_TOKEN }}
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        skip-existing: true
