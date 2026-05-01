@@ -6,18 +6,34 @@
 
 
 #if PY_VERSION_HEX < 0x03100000
-    #define Py_Is(x, y) ((x) == (y))
-    #define Py_IsTrue(x) Py_Is((x), Py_True)
+#define Py_Is(x, y) ((x) == (y))
+#define Py_IsTrue(x) Py_Is((x), Py_True)
 #endif
 
 #if PY_VERSION_HEX < 0x03130000
-    #define PyLong_FromUnsignedNativeBytes(buffer, n_bytes, flags) (_PyLong_FromByteArray(buffer, n_bytes, PY_LITTLE_ENDIAN, 0))
+#define PyLong_FromUnsignedNativeBytes(buffer, n_bytes, flags) (_PyLong_FromByteArray(buffer, n_bytes, PY_LITTLE_ENDIAN, 0))
+#endif
+
+
+#ifndef Py_GIL_DISABLED
+# define Py_BEGIN_CRITICAL_SECTION(op)      \
+    void
+# define Py_BEGIN_CRITICAL_SECTION_MUTEX(mutex)    \
+    void
+# define Py_END_CRITICAL_SECTION()          \
+    void
+# define Py_BEGIN_CRITICAL_SECTION2(a, b)   \
+    void
+# define Py_BEGIN_CRITICAL_SECTION2_MUTEX(m1, m2)  \
+    void
+# define Py_END_CRITICAL_SECTION2()         \
+    void
 #endif
 
 
 typedef struct {
     PyObject_HEAD
-    NetRangeContainer *netsContainer;
+        NetRangeContainer* netsContainer;
 } IPSet;
 
 

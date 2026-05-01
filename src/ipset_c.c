@@ -99,13 +99,16 @@ error:
 
 static PyObject*
 IPSet_getCidrs(IPSet* self) {
-    PyObject* resList = PyList_New(self->netsContainer->len);
+    PyObject* resList;
+    Py_BEGIN_CRITICAL_SECTION(self);
+    resList = PyList_New(self->netsContainer->len);
     char const prefix[IPV6_MAX_STRING_LEN] = "";
     const NetRangeObject** const netsArray = self->netsContainer->array;
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
         NetRangeObject_asUtf8CharCidr((const NetRangeObject*)netsArray[i], prefix, IPV6_MAX_STRING_LEN);
         PyList_SetItem(resList, i, PyUnicode_FromString(prefix));
     }
+    Py_END_CRITICAL_SECTION();
     return resList;
 }
 
@@ -116,7 +119,10 @@ IPSet_isContainsCidr(IPSet* self, PyObject* cidr) {
     if (netRange == NULL) {
         return NULL;
     }
-    const Py_ssize_t res = NetRangeContainer_findNetRangeContainsIndex(self->netsContainer, netRange);
+    Py_ssize_t res;
+    Py_BEGIN_CRITICAL_SECTION(self);
+    res = NetRangeContainer_findNetRangeContainsIndex(self->netsContainer, netRange);
+    Py_END_CRITICAL_SECTION();
     NetRangeObject_destroy(netRange);
     return PyBool_FromLong(res >= 0);
 }
@@ -128,7 +134,10 @@ IPSet__contains__(IPSet* self, PyObject* cidr) {
     if (netRange == NULL) {
         return -1;
     }
-    const Py_ssize_t res = NetRangeContainer_findNetRangeContainsIndex(self->netsContainer, netRange) >= 0;
+    Py_ssize_t res;
+    Py_BEGIN_CRITICAL_SECTION(self);
+    res = NetRangeContainer_findNetRangeContainsIndex(self->netsContainer, netRange) >= 0;
+    Py_END_CRITICAL_SECTION();
     NetRangeObject_destroy(netRange);
     return res;
 }
@@ -140,7 +149,10 @@ IPSet_isIntersectsCidr(IPSet* self, PyObject* cidr) {
     if (netRange == NULL) {
         return NULL;
     }
-    const Py_ssize_t res = NetRangeContainer_findNetRangeIntersectsIndex(self->netsContainer, netRange);
+    Py_ssize_t res;
+    Py_BEGIN_CRITICAL_SECTION(self);
+    res = NetRangeContainer_findNetRangeIntersectsIndex(self->netsContainer, netRange);
+    Py_END_CRITICAL_SECTION();
     NetRangeObject_destroy(netRange);
     return PyBool_FromLong(res >= 0);
 }
@@ -149,16 +161,23 @@ IPSet_isIntersectsCidr(IPSet* self, PyObject* cidr) {
 static PyObject*
 IPSet_isIntersects(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
+    Py_ssize_t res = 0;
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
     if (self->netsContainer->len < other->netsContainer->len) {
         IPSet* tmp = self;
         self = other;
         other = tmp;
     }
     for (Py_ssize_t i = 0; i < other->netsContainer->len; i++) {
-        Py_ssize_t res = NetRangeContainer_findNetRangeIntersectsIndex(self->netsContainer, other->netsContainer->array[i]);
-        if (res >= 0) {
-            Py_RETURN_TRUE;
+        Py_ssize_t cmp = NetRangeContainer_findNetRangeIntersectsIndex(self->netsContainer, other->netsContainer->array[i]);
+        if (cmp >= 0) {
+            res = 1;
+            break;
         }
+    }
+    Py_END_CRITICAL_SECTION2();
+    if (res) {
+        Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
 }
@@ -166,16 +185,18 @@ IPSet_isIntersects(IPSet* self, IPSet* other) {
 
 static PyObject*
 IPSet_size(IPSet* self) {
+    PyObject* res;
+    Py_BEGIN_CRITICAL_SECTION(self);
     NetRangeObject** array = self->netsContainer->array;
     if (self->netsContainer->len == 1 && array[0]->len == 0 && array[0]->isIPv6) {
         PyObject* one = PyLong_FromLong(1L);
         PyObject* shift128 = PyLong_FromLong(128L);
-        PyObject* resObj = PyNumber_Lshift(one, shift128);
+        res = PyNumber_Lshift(one, shift128);
         Py_DECREF(shift128);
         Py_DECREF(one);
-        return resObj;
+        goto exit;
     }
-    uint128c res = { .hi = 0, .lo = 0 };
+    uint128c sumres = { .hi = 0, .lo = 0 };
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
         PY_UINT32_T lenShift = ((array[i]->isIPv6 ? 128 : 32) - array[i]->len);
         uint128c localLen = { .hi = 0, .lo = 0 };
@@ -184,16 +205,23 @@ IPSet_size(IPSet* self) {
         } else {
             localLen.lo = (PY_UINT64_T)0b1 << lenShift;
         }
-        res = ADD128(res, localLen);
+        sumres = ADD128(sumres, localLen);
     }
-    return PyLong_FromUnsignedNativeBytes((const unsigned char*)&res, 16, -1);
+    res = PyLong_FromUnsignedNativeBytes((const unsigned char*)&sumres, 16, -1);
+exit:
+    Py_END_CRITICAL_SECTION();
+    return res;
 }
 
 
 static PyObject*
 IPSet_isSuperset(IPSet* self, IPSet* other) {
+    int res;
     IPSET_TYPE_CHECK(other);
-    if (NetRangeContainer_isSuperset(self->netsContainer, other->netsContainer)) {
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
+    res = NetRangeContainer_isSuperset(self->netsContainer, other->netsContainer);
+    Py_END_CRITICAL_SECTION2();
+    if (res) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -203,10 +231,14 @@ IPSet_isSuperset(IPSet* self, IPSet* other) {
 static PyObject*
 IPSet__gt__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
-    if (NetRangeContainer_isSuperset(self->netsContainer, other->netsContainer)) {
+    int res;
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
+    res = NetRangeContainer_isSuperset(self->netsContainer, other->netsContainer);
+    Py_END_CRITICAL_SECTION2();
+    if (res) {
         PyObject* ssize = IPSet_size(self);
         PyObject* osize = IPSet_size(other);
-        int res = PyObject_RichCompareBool(ssize, osize, Py_GT);
+        res = PyObject_RichCompareBool(ssize, osize, Py_GT);
         Py_DECREF(ssize);
         Py_DECREF(osize);
         if (res) {
@@ -221,7 +253,11 @@ IPSet__gt__(IPSet* self, IPSet* other) {
 static PyObject*
 IPSet_isSubset(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
-    if (NetRangeContainer_isSuperset(other->netsContainer, self->netsContainer)) {
+    int res;
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
+    res = NetRangeContainer_isSuperset(other->netsContainer, self->netsContainer);
+    Py_END_CRITICAL_SECTION2();
+    if (res) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -231,7 +267,11 @@ IPSet_isSubset(IPSet* self, IPSet* other) {
 static PyObject*
 IPSet__lt__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
-    if (NetRangeContainer_isSuperset(other->netsContainer, self->netsContainer)) {
+    int res;
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
+    res = NetRangeContainer_isSuperset(other->netsContainer, self->netsContainer);
+    Py_END_CRITICAL_SECTION2();
+    if (res) {
         PyObject* ssize = IPSet_size(self);
         PyObject* osize = IPSet_size(other);
         int res = PyObject_RichCompareBool(ssize, osize, Py_LT);
@@ -252,7 +292,9 @@ IPSet_addCidr(IPSet* self, PyObject* cidr) {
     if (netRange == NULL) {
         return NULL;
     }
+    Py_BEGIN_CRITICAL_SECTION(self);
     NetRangeContainer_addNetRange(self->netsContainer, netRange);
+    Py_END_CRITICAL_SECTION();
     Py_RETURN_NONE;
 }
 
@@ -263,7 +305,9 @@ IPSet_removeCidr(IPSet* self, PyObject* cidr) {
     if (netRange == NULL) {
         return NULL;
     }
+    Py_BEGIN_CRITICAL_SECTION(self);
     NetRangeContainer_removeNetRange(self->netsContainer, netRange);
+    Py_END_CRITICAL_SECTION();
     NetRangeObject_destroy(netRange);
     Py_RETURN_NONE;
 }
@@ -295,7 +339,9 @@ IPSet_copy(IPSet* self) {
     if (res == NULL) {
         goto exit;
     }
+    Py_BEGIN_CRITICAL_SECTION(self);
     res->netsContainer = NetRangeContainer_copy(self->netsContainer);
+    Py_END_CRITICAL_SECTION();
     if (res->netsContainer == NULL) {
         Py_XDECREF(res);
         return NULL;
@@ -312,7 +358,9 @@ IPSet__or__(IPSet* self, IPSet* other) {
     if (res == NULL) {
         return res;
     }
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
     res->netsContainer = NetRangeContainer_union(self->netsContainer, other->netsContainer);
+    Py_END_CRITICAL_SECTION2();
     if (res->netsContainer == NULL) {
         Py_XDECREF(res);
         return NULL;
@@ -326,15 +374,18 @@ IPSet__xor__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
     NetRangeContainer* united = NULL, * intersect = NULL, * subtract = NULL;
     IPSet* res = NULL;
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
     united = NetRangeContainer_union(self->netsContainer, other->netsContainer);
+    Py_END_CRITICAL_SECTION2();
     if (united == NULL) {
         goto error;
     }
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
     intersect = NetRangeContainer_intersection(self->netsContainer, other->netsContainer);
+    Py_END_CRITICAL_SECTION2();
     if (intersect == NULL) {
         goto error;
     }
-
     subtract = NetRangeContainer_subtract(united, intersect);
     if (subtract == NULL) {
         goto error;
@@ -365,7 +416,9 @@ IPSet__subtract__(IPSet* self, IPSet* other) {
     if (res == NULL) {
         return res;
     }
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
     res->netsContainer = NetRangeContainer_subtract(self->netsContainer, other->netsContainer);
+    Py_END_CRITICAL_SECTION2();
     if (res->netsContainer == NULL) {
         Py_XDECREF(res);
         return NULL;
@@ -377,7 +430,10 @@ IPSet__subtract__(IPSet* self, IPSet* other) {
 static IPSet*
 IPSet__and__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
-    NetRangeContainer* cont = NetRangeContainer_intersection(self->netsContainer, other->netsContainer);
+    NetRangeContainer* cont;
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
+    cont = NetRangeContainer_intersection(self->netsContainer, other->netsContainer);
+    Py_END_CRITICAL_SECTION2();
     if (cont == NULL) {
         return NULL;
     }
@@ -393,16 +449,25 @@ IPSet__and__(IPSet* self, IPSet* other) {
 static PyObject*
 IPSet__eq__(IPSet* self, IPSet* other) {
     IPSET_TYPE_CHECK(other);
+    Py_ssize_t res = 1;
+    Py_BEGIN_CRITICAL_SECTION2(self, other);
     if (self->netsContainer->len != other->netsContainer->len) {
-        Py_RETURN_FALSE;
+        res = 0;
+        goto exit;
     }
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
         NetRangeObject* a = self->netsContainer->array[i], * b = other->netsContainer->array[i];
         if (!EQ128(a->first, b->first) || a->len != b->len) {
-            Py_RETURN_FALSE;
+            res = 0;
+            goto exit;
         }
     }
-    Py_RETURN_TRUE;
+exit:
+    Py_END_CRITICAL_SECTION2();
+    if (res) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
 }
 
 
@@ -444,13 +509,19 @@ IPSet_tp_richcompare(IPSet* self, IPSet* other, int op) {
 
 static int
 IPSet__bool__(IPSet* self) {
-    return self->netsContainer->len > 0;
+    Py_ssize_t res;
+    Py_BEGIN_CRITICAL_SECTION(self);
+    res = self->netsContainer->len > 0;
+    Py_END_CRITICAL_SECTION();
+    return res;
 }
 
 
 static PyObject*
 IPSet__getstate__(IPSet* self, PyObject* Py_UNUSED(ignored)) {
-    PyObject* bytes = PyBytes_FromStringAndSize(NULL, sizeof(IPSetPickle) + sizeof(NetRangeObject) * self->netsContainer->len);
+    PyObject* bytes;
+    Py_BEGIN_CRITICAL_SECTION(self);
+    bytes = PyBytes_FromStringAndSize(NULL, sizeof(IPSetPickle) + sizeof(NetRangeObject) * self->netsContainer->len);
     if (!bytes) {
         return PyErr_NoMemory();
     }
@@ -464,6 +535,7 @@ IPSet__getstate__(IPSet* self, PyObject* Py_UNUSED(ignored)) {
     for (Py_ssize_t i = 0; i < self->netsContainer->len; i++) {
         memcpy(buffer->data + i, self->netsContainer->array[i], sizeof(NetRangeObject));
     }
+    Py_END_CRITICAL_SECTION();
     return bytes;
 }
 
@@ -486,6 +558,7 @@ IPSet__setstate__(IPSet* self, PyObject* state) {
             PyExc_ValueError, "Pickle version mismatch. Got version %d but expected version %d.", buffer->version, PICKLE_VERSION
         );
     }
+    Py_BEGIN_CRITICAL_SECTION(self);
     NetRangeContainer_destroy(self->netsContainer);
     self->netsContainer = NetRangeContainer_create(buffer->len);
     for (Py_ssize_t i = 0; i < buffer->len; i++) {
@@ -493,6 +566,7 @@ IPSet__setstate__(IPSet* self, PyObject* state) {
         *(self->netsContainer->array[i]) = buffer->data[i];
     }
     self->netsContainer->len = buffer->len;
+    Py_END_CRITICAL_SECTION();
     Py_RETURN_NONE;
 }
 

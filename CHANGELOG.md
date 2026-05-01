@@ -3,6 +3,7 @@
 ### Added
 * new IPSet method `isIntersects(ipset)` to check if two IPSets intersect
 * python 3.14 support
+* actual free-threading CRITICAL_SECTION locks
 
 ### Changed
 * expand IPSet argument type from `Sequence[str]` to `Iterable[str]` for better compatibility with type checking tools and synchronization with actual accepted types
