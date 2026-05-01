@@ -5,7 +5,7 @@
 
 [tool.poetry]
 name = "ipset_c"
-version = "0.2.0.dev1"
+version = "0.2.0.dev2"
 description = "IPSet written in C"
 readme = "README.md"
 authors = ["glowlex <antonioavocado777@gmail.com>"]
@@ -28,6 +28,7 @@ classifiers = [
     'Programming Language :: Python :: 3.14',
     'Programming Language :: C',
     'Programming Language :: Python :: Implementation :: CPython',
+    'Programming Language :: Python :: Free Threading',
     'Topic :: System :: Networking',
     'Topic :: System :: Networking :: Firewalls',
     'Topic :: Software Development',
