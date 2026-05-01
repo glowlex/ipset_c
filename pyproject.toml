@@ -1,3 +1,4 @@
+# poetry lock --regenerate
 # poetry install --no-root
 # poetry install --sync
 # poetry install --no-root --without dev,test
@@ -58,6 +59,11 @@ tox = "*"
 poetry = "*"
 
 
+[tool.poetry.group.tox.dependencies]
+pytest = "*"
+setuptools = "*"
+
+
 [tool.poetry.group.dev.dependencies]
 poetry = "*"
 poethepoet = '^0.25.0'
@@ -68,7 +74,7 @@ testpaths = [
     "tests",
 ]
 python_files = "test_*.py"
-python_functions = "test[A-Z]*"
+python_functions = "test"
 
 
 [tool.isort]
