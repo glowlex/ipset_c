@@ -297,7 +297,7 @@ NetRangeContainer_addNetRange(NetRangeContainer* const self, NetRangeObject* ite
         self->array[i] = item;
         self->len++;
         Py_ssize_t startIdx = max(i - item->len, 0);
-        Py_ssize_t size = min(self->len - startIdx, item->isIPv6 ? 129 : 33);
+        Py_ssize_t size = min(self->len - startIdx, item->isIPv6 ? 257 : 65);
         Py_ssize_t changesNum = mergeNetRangesArray(&self->array[startIdx], size, startIdx ? item->len : i);
         if (changesNum) {
             removeGapsFromNetRanges(self, startIdx);
