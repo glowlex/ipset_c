@@ -8,7 +8,9 @@ Supports both IPv4 and IPv6. Picklable. Can be compiled for free-threading usage
 
 > [!IMPORTANT]
 > Notes:
+>
 > Due to the max sequence size in python(sys.maxsize), using len() with a large IPv6 IPSet raising an error. Use the IPSet([]).size attribute instead.
+>
 > Do not mix IPv4 and IPv6 in one IPSet without converting to IPv4-mapped IPv6. For example, instead of "0.0.0.0/32" pass "::ffff:0.0.0.0/128".
 
 ## Installation
