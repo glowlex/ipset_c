@@ -60,6 +60,8 @@ jobs:
         pip uninstall --yes ipset_c
         pip install ipset_c --no-index --find-links dist
     - name: Test with pytest
+      env:
+        PYTHON_GIL: ${{case(contains(matrix.python-version, 't'), 0, 1)}}
       run: |
         cd tests
         poetry run pytest
