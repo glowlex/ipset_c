@@ -5,7 +5,7 @@
 
 [tool.poetry]
 name = "ipset_c"
-version = "0.2.0.dev2"
+version = "0.2.0"
 description = "IPSet written in C"
 readme = "README.md"
 authors = ["glowlex <antonioavocado777@gmail.com>"]

@@ -1,4 +1,4 @@
-## [Unreleased]
+## v0.2.0 - 2026-05-08
 
 ### Added
 * new IPSet method `isIntersects(ipset)` to check if two IPSets intersect
