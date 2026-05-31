@@ -8,6 +8,9 @@ permissions:
   contents: read
   id-token: write
 
+env:
+  POETRY_SOLVER_MIN_RELEASE_AGE: 7
+
 jobs:
   build:
     strategy:
@@ -41,7 +44,7 @@ jobs:
         uses: snok/install-poetry@v1
         if: matrix.python-version != '3.8' && matrix.python-version != '3.9'
         with:
-          version: 2.3.4
+          version: 2.4.1
           virtualenvs-create: true
           virtualenvs-in-project: true
       - name: Load cached venv
