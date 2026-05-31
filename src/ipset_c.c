@@ -208,7 +208,7 @@ IPSet_size(IPSet* self) {
         sumres = ADD128(sumres, localLen);
     }
     res = PyLong_FromUnsignedNativeBytes((const unsigned char*)&sumres, 16, -1);
-exit:
+exit:;
     Py_END_CRITICAL_SECTION();
     return res;
 }
@@ -462,7 +462,7 @@ IPSet__eq__(IPSet* self, IPSet* other) {
             goto exit;
         }
     }
-exit:
+exit:;
     Py_END_CRITICAL_SECTION2();
     if (res) {
         Py_RETURN_TRUE;
