@@ -1,3 +1,8 @@
+## v0.2.1 - 2026-05-31
+
+### Fixed
+* compilation error from source code in some cases [#1](https://github.com/glowlex/ipset_c/issues/1)
+
 ## v0.2.0 - 2026-05-08
 
 ### Added
